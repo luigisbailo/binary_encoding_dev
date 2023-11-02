@@ -1,2 +1,18 @@
 dataset:
   name: FashionMNIST
+
+hyperparams:
+  train:
+    batch_size: 64
+    epochs: 100
+    lr: 0.0001
+    loss_pen_factor: 10
+    logging_pen: 5
+    step_scheduler: 20
+  architecture:
+    pen_layer_node: 64
+    hidden_layer_base: [1024,1024]
+
+samples:
+  3
+

@@ -3,8 +3,15 @@ import torch
 import torch.nn as nn
 from sklearn.mixture import GaussianMixture
 import scipy
-def train_classifier (device, network, trainset, testset, batch_size=100, epochs=40, accuracy_target=0.9, step_scheduler=20, lr=0.0005, 
-                      loss_pen_factor=10, pen_layer_node=64, logging_pen=10, pen_loss=True, verbose=True, save_pen=False):
+
+def train_classifier(device, network, trainset, testset, hyper_train, binenc_loss=True, save_pen=True, verbose=True):
+
+    batch_size = hyper_train['batch_size']
+    epochs = hyper_train['epochs']
+    step_scheduler = hyper_train['step_scheduler']
+    lr = hyper_train['lr']
+    loss_pen_factor = hyper_train['loss_pen_factor']
+    logging_pen = hyper_train['logging_pen']
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True )
     
@@ -22,7 +29,7 @@ def train_classifier (device, network, trainset, testset, batch_size=100, epochs
     
     if save_pen:
         pen_list = []
-        
+
     for epoch in range (epochs):
         for x,y in trainloader:
             x=x.to(device)
@@ -32,7 +39,7 @@ def train_classifier (device, network, trainset, testset, batch_size=100, epochs
    
             loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
             loss = loss_class 
-            if pen_loss:
+            if binenc_loss:
                 loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape), reduction='mean' ))
                 loss = loss + loss_pen_factor*loss_pen
                 
@@ -92,7 +99,6 @@ def train_classifier (device, network, trainset, testset, batch_size=100, epochs
             wclass_variation_list.append(wclass_variation)
             equiangular_list.append(equiangular)
             equinorm_list.append(equinorm)
-            
 
             score = []
             stds = []
@@ -124,7 +130,7 @@ def train_classifier (device, network, trainset, testset, batch_size=100, epochs
             accuracy_test_list.append(accuracy_test)
             
             if verbose:
-                print(np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(score,5), np.around(stds,5), '---',
+                print(epoch, np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(score,5), np.around(stds,5), '---',
                       np.around(wclass_variation,5), np.around(equiangular, 5), np.around(equinorm, 5))
                           
             
