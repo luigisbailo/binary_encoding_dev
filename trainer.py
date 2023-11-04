@@ -63,25 +63,25 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
             y_set = torch.cat(y_set)
             pen_layer_set = torch.cat(pen_layer_set)
             
-            loss_train = nn.CrossEntropyLoss(reduction='mean')(y_pred_set, y_set).detach().numpy()
-            accuracy_train = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().numpy()        
+            loss_train = nn.CrossEntropyLoss(reduction='mean')(y_pred_set, y_set).detach().cpu().numpy()
+            accuracy_train = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()        
             loss_train_list.append(loss_train)
             accuracy_train_list.append(accuracy_train)
             
             if save_pen and epoch%logging_pen==0:
-                pen_list.append(pen_layer_set.numpy())
+                pen_list.append(pen_layer_set.cpu().numpy())
             
             mean_class_cent = []
             sigma_w = []
             sigma_b_class = []
-            global_mean = np.mean(pen_layer_set.numpy(), axis=0)
+            global_mean = np.mean(pen_layer_set.cpu().numpy(), axis=0)
 
             for class_label in np.unique(y):
-                sel = np.argmax(y_pred_set.numpy(),axis=1)==class_label
+                sel = np.argmax(y_pred_set.cpu().numpy(),axis=1)==class_label
                 if (np.sum(sel)>0):
-                    mean_class = np.mean(pen_layer_set.numpy()[sel], axis=0)
+                    mean_class = np.mean(pen_layer_set.cpu().numpy()[sel], axis=0)
                     mean_class_cent.append(mean_class-global_mean)
-                    sigma_w_class = np.cov((pen_layer_set.numpy()[sel]-mean_class).T)
+                    sigma_w_class = np.cov((pen_layer_set.cpu().numpy()[sel]-mean_class).T)
 
                     sigma_w.append(sigma_w_class)
                     sigma_b_class.append((mean_class-global_mean))
@@ -126,7 +126,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
             y_pred_set = torch.cat(y_pred_set)
             y_set = torch.cat(y_set)
             
-            accuracy_test = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().numpy()
+            accuracy_test = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()
             accuracy_test_list.append(accuracy_test)
             
             if verbose:
