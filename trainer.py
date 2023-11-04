@@ -76,7 +76,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
             sigma_b_class = []
             global_mean = np.mean(pen_layer_set.cpu().numpy(), axis=0)
 
-            for class_label in np.unique(y):
+            for class_label in np.unique(y.cpu()):
                 sel = np.argmax(y_pred_set.cpu().numpy(),axis=1)==class_label
                 if (np.sum(sel)>0):
                     mean_class = np.mean(pen_layer_set.cpu().numpy()[sel], axis=0)
@@ -104,8 +104,8 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
             stds = []
             for d in range (pen_layer.shape[1]):
                 gmm = GaussianMixture(n_components=2)
-                gmm.fit(pen_layer[:,d].reshape(-1,1))
-                score.append(gmm.score(pen_layer[:,d].reshape(-1,1)))
+                gmm.fit(pen_layer[:,d].cpu().reshape(-1,1))
+                score.append(gmm.score(pen_layer[:,d].cpu().reshape(-1,1)))
                 # means = gmm.means_.flatten()
                 stds.append(np.sqrt(gmm.covariances_).flatten())
 
