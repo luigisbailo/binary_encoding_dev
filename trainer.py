@@ -40,7 +40,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
             loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
             loss = loss_class 
             if binenc_loss:
-                loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape), reduction='mean' ))
+                loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(device), reduction='mean' ))
                 loss = loss + loss_pen_factor*loss_pen
                 
             loss.backward()
