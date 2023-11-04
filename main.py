@@ -44,8 +44,8 @@ if __name__ == '__main__':
     torch_dataset = getattr(torch_module, name_dataset)
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
-    testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
+    trainset = torch_dataset ("./dataset", train=True, download=False, transform=transform)
+    testset = torch_dataset ("./dataset", train=False, download=False, transform=transform)
 
 
     if os.path.exists("results"):
