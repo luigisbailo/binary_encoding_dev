@@ -44,13 +44,13 @@ if __name__ == '__main__':
     torch_dataset = getattr(torch_module, name_dataset)
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    trainset = torch_dataset ("./dataset", train=True, download=False, transform=transform)
-    testset = torch_dataset ("./dataset", train=False, download=False, transform=transform)
+    trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
+    testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
 
 
-    if os.path.exists("results"):
-        shutil.rmtree("results")
-    os.mkdir("results")
+    if os.path.exists("../results"):
+        shutil.rmtree("../results")
+    os.mkdir("../results")
 
 
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             res_binenc[key] = np.hstack([res[key] for res in results])
         except:
             res_binenc[key] = results[0][key]
-    with open ('results/res_binenc.pkl', 'wb') as file:
+    with open ('../results/res_binenc.pkl', 'wb') as file:
         pickle.dump(res_binenc, file)
 
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             res_linpen[key] = np.hstack([res[key] for res in results ])
         except:
             res_linpen[key] = results[0][key]
-    with open ('results/res_linpen.pkl', 'wb') as file:
+    with open ('../results/res_linpen.pkl', 'wb') as file:
         pickle.dump(res_linpen, file)
 
     print('Training no penultimate architecture')
@@ -102,7 +102,7 @@ if __name__ == '__main__':
             res_nopen[key] = np.hstack([res[key] for res in results ])
         except:
             res_nopen[key] = results[0][key]
-    with open ('results/res_nopen.pkl', 'wb') as file:
+    with open ('../results/res_nopen.pkl', 'wb') as file:
         pickle.dump(res_nopen, file)        
 
 
@@ -118,5 +118,5 @@ if __name__ == '__main__':
             res_nonlinpen[key] = np.hstack([res[key] for res in results ])
         except:
             res_nonlinpen[key] = results[0][key]
-    with open ('results/res_nonlinpen.pkl', 'wb') as file:
+    with open ('../results/res_nonlinpen.pkl', 'wb') as file:
         pickle.dump(res_nonlinpen, file)
