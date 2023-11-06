@@ -11,7 +11,6 @@ import os
 import shutil
 import yaml
 import argparse
-import zipfile
 import importlib
 
 def parse_config(config_file):
@@ -29,6 +28,7 @@ def parse_config(config_file):
 if __name__ == '__main__':
 
     verbose = True
+
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print("cuda available: ", torch.cuda.is_available())
 
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_lin_nodes=None, hidden_layers_nodes=hyper_architecture['backbone_nodes']+[hyper_architecture['pen_layer_node']]).to(device)
+        classifier = Classifier_cnn(pen_lin_nodes=None, backbone_nodes=hyper_architecture['backbone_nodes']+[hyper_architecture['pen_lin_nodes']]).to(device)
         results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
