@@ -165,7 +165,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
                 accuracy_test = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()
                 accuracy_test_list.append(accuracy_test)
 
-                if verbose and network.pen_linear_nodes:
+                if verbose and network. pen_lin_nodes:
                     print(epoch, np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(purity, 6), '---',
                           np.around(sigma_w, 5), np.around(wclass_variation,5), np.around(equiangular, 5), np.around(maxangle, 5), np.around(equinorm, 5), '---', 
                           np.around(score,5), np.around(stds,5), np.around(peak_dist_train,5))
@@ -174,7 +174,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
                           np.around(sigma_w, 5), np.around(wclass_variation,5), np.around(equiangular, 5), np.around(maxangle, 5), np.around(equinorm, 5))
 
 
-    if network.pen_linear_nodes:  
+    if network. pen_lin_nodes:  
 
         with torch.no_grad():
 
@@ -214,7 +214,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
            'equinorm' : np.vstack(equinorm_list),
           }
 
-    if network.pen_linear_nodes:
+    if network. pen_lin_nodes:
         res['score'] =  np.vstack(score_list)
         res['stds'] = np.vstack(stds_list)
         res['peak_distance'] = np.vstack(peak_dist_train_list)
