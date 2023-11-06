@@ -28,6 +28,7 @@ def parse_config(config_file):
 
 if __name__ == '__main__':
 
+    verbose = True
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print("cuda available: ", torch.cuda.is_available())
 
@@ -59,9 +60,9 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)
-        classifier = Classifier_cnn(pen_layer_node=hyper_architecture['pen_layer_node'], hidden_layer_node=hyper_architecture['hidden_layer_base']).to(device)
+        classifier = Classifier_cnn(pen_lin_nodes=hyper_architecture['pen_lin_nodes'], backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
         results.append(
-            train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=True, save_pen=False, verbose=True)
+            train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=True, verbose=verbose)
             )
     for key in results[0].keys():
         try:
@@ -78,9 +79,9 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_layer_node=hyper_architecture['pen_layer_node'], hidden_layer_node=hyper_architecture['hidden_layer_base']).to(device)
+        classifier = Classifier_cnn(pen_lin_nodes=hyper_architecture['pen_lin_nodes'], backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
         results.append(
-            train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, save_pen=False, verbose=True)
+            train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose)
             )
     for key in results[0].keys():
         try:
@@ -90,13 +91,15 @@ if __name__ == '__main__':
     with open ('../results/res_linpen.pkl', 'wb') as file:
         pickle.dump(res_linpen, file)
 
+
+
     print('Training no penultimate architecture')
     res_nopen = {}
     results = []
     for i in range(samples):    
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_layer_node=None, hidden_layer_node=hyper_architecture['hidden_layer_base']).to(device)
-        results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, save_pen=False, verbose=True))
+        classifier = Classifier_cnn(pen_lin_nodes=None, backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
+        results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
             res_nopen[key] = np.hstack([res[key] for res in results ])
@@ -106,13 +109,14 @@ if __name__ == '__main__':
         pickle.dump(res_nopen, file)        
 
 
+
     print('Training non-linear penultimate architecture')
     res_nonlinpen = {}
     results = []
     for i in range(samples):
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_layer_node=None, hidden_layer_node=hyper_architecture['hidden_layer_base']+[hyper_architecture['pen_layer_node']]).to(device)
-        results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, save_pen=False, verbose=True))
+        classifier = Classifier_cnn(pen_lin_nodes=None, hidden_layers_nodes=hyper_architecture['backbone_nodes']+[hyper_architecture['pen_layer_node']]).to(device)
+        results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
             res_nonlinpen[key] = np.hstack([res[key] for res in results ])

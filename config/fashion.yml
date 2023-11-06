@@ -7,11 +7,12 @@ hyperparams:
     epochs: 100
     lr: 0.0001
     loss_pen_factor: 10
-    logging_pen: 5
+    logging_pen: 0
+    logging: 5
     step_scheduler: 20
   architecture:
-    pen_layer_node: 64
-    hidden_layer_base: [1024,1024]
+    pen_lin_nodes: 64
+    backbone_nodes: [1024,1024]
 
 samples:
   3
