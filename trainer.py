@@ -22,22 +22,6 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
     res_list = []
     res_training = {}
 
-    # accuracy_train_list = []
-    # accuracy_test_list = []
-    # loss_train_list = []
-    # wclass_variation_list = []
-    # sigmaw_list = []
-    # equiangular_list = []
-    # maxangle_list = []
-    # equinorm_list = []
-    # score_list = []
-    # stds_list = []
-    # purity_list = []
-    # peak_dist_train_list = []  
-
-    # if logging_pen>0:
-    #     pen_list = []
-
     for epoch in range (epochs):
         for x,y in trainloader:
             x=x.to(device)
@@ -67,24 +51,5 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
 
     for key in res_list[0].keys():
         res_training[key] = np.vstack([res_epoch [key] for res_epoch in res_list])
-
-    # res = {'accuracy_train' : np.vstack(accuracy_train_list), 
-    #        'accuracy_test' : np.vstack(accuracy_test_list), 
-    #        'purity' : np.vstack(purity_list),
-    #        'wclass_variation' : np.vstack(wclass_variation_list), 
-    #        'sigmaw' : np.vstack(sigmaw_list),
-    #        'maxangle' : np.vstack(maxangle_list),
-    #        'equiangular' : np.vstack(equiangular_list), 
-    #        'equinorm' : np.vstack(equinorm_list),
-    #       }
-
-    # if network. pen_lin_nodes:
-    #     res['score'] =  np.vstack(score_list)
-    #     res['stds'] = np.vstack(stds_list)
-    #     res['peak_distance'] = np.vstack(peak_dist_train_list)
-    #     res['encoding'] = encoding
-        
-    # if logging_pen>0:
-    #     res['pen'] = np.array(pen_list)
     
     return res_training
