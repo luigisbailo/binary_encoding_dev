@@ -63,7 +63,7 @@ def train_classifier(device, network, trainset, testset, hyper_train, binenc_los
 
             res_epoch = get_metrics(device=device, network=network, trainset=trainset, testset=testset, save_pen=save_pen, verbose=verbose)
 
-        res_list.append(res_epoch)
+            res_list.append(res_epoch)
 
     for key in res_list[0].keys():
         res_training[key] = np.vstack([res_epoch [key] for res_epoch in res_list])
