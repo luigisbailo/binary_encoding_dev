@@ -1,5 +1,5 @@
-from nn import Classifier_cnn
 from trainer import train_classifier
+import nn
 
 import numpy as np
 import torch
@@ -36,9 +36,10 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True)
     configs =  parse_config(parser.parse_args().config)
 
+    architecture_backbone = configs['architecture']['backbone']
     hyper_architecture = configs['hyperparams']['architecture']
     hyper_train = configs['hyperparams']['train']
-    samples = configs['samples']
+    samples = configs['hyperparams']['train']['samples']
 
     name_dataset = configs['dataset']['name']    
     torch_module= importlib.import_module("torchvision.datasets")
@@ -48,11 +49,13 @@ if __name__ == '__main__':
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
 
+    path_metrics_dir = str(configs['path']['metrics_dir'])
+    if os.path.exists(path_metrics_dir):
+        shutil.rmtree(path_metrics_dir)
+    os.mkdir(path_metrics_dir)
 
-    if os.path.exists("../results"):
-        shutil.rmtree("../results")
-    os.mkdir("../results")
 
+    
 
 
     print('Training binary encoding architecture:')
@@ -60,7 +63,8 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)
-        classifier = Classifier_cnn(pen_lin_nodes=hyper_architecture['pen_lin_nodes'], backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
+        classifier = classifier = getattr(nn, architecture_backbone)(
+            pen_lin_nodes=hyper_architecture['pen_lin_nodes'], pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
         results.append(
             train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=True, verbose=verbose)
             )
@@ -69,7 +73,7 @@ if __name__ == '__main__':
             res_binenc[key] = np.hstack([res[key] for res in results])
         except:
             res_binenc[key] = results[0][key]
-    with open ('../results/res_binenc.pkl', 'wb') as file:
+    with open (path_metrics_dir + '/res_binenc.pkl', 'wb') as file:
         pickle.dump(res_binenc, file)
 
 
@@ -79,7 +83,8 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_lin_nodes=hyper_architecture['pen_lin_nodes'], backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
+        classifier = getattr(nn, architecture_backbone)(
+            pen_lin_nodes=hyper_architecture['pen_lin_nodes'], pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
         results.append(
             train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose)
             )
@@ -88,7 +93,7 @@ if __name__ == '__main__':
             res_linpen[key] = np.hstack([res[key] for res in results ])
         except:
             res_linpen[key] = results[0][key]
-    with open ('../results/res_linpen.pkl', 'wb') as file:
+    with open (path_metrics_dir + '/res_linpen.pkl', 'wb') as file:
         pickle.dump(res_linpen, file)
 
 
@@ -98,14 +103,14 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):    
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_lin_nodes=None, backbone_nodes=hyper_architecture['backbone_nodes']).to(device)
+        classifier = getattr(nn, architecture_backbone)(pen_lin_nodes=None, pen_nonlin_nodes=None).to(device)
         results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
             res_nopen[key] = np.hstack([res[key] for res in results ])
         except:
             res_nopen[key] = results[0][key]
-    with open ('../results/res_nopen.pkl', 'wb') as file:
+    with open (path_metrics_dir + '/res_nopen.pkl', 'wb') as file:
         pickle.dump(res_nopen, file)        
 
 
@@ -115,12 +120,13 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):
         print('Sample: ', i)        
-        classifier = Classifier_cnn(pen_lin_nodes=None, backbone_nodes=hyper_architecture['backbone_nodes']+[hyper_architecture['pen_lin_nodes']]).to(device)
+        classifier = getattr(nn, architecture_backbone)(
+            pen_lin_nodes=None, pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
         results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
             res_nonlinpen[key] = np.hstack([res[key] for res in results ])
         except:
             res_nonlinpen[key] = results[0][key]
-    with open ('../results/res_nonlinpen.pkl', 'wb') as file:
+    with open (path_metrics_dir + '/res_nonlinpen.pkl', 'wb') as file:
         pickle.dump(res_nonlinpen, file)
