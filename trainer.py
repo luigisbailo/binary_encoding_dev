@@ -203,7 +203,5 @@ class Trainer ():
                 print( np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(purity, 6), '---',
                         np.around(sigma_w, 5), np.around(wclass_variation,5), np.around(equiangular, 5), np.around(maxangle, 5), np.around(equinorm, 5))
 
-
-
         
         return res

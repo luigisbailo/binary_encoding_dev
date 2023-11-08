@@ -17,7 +17,3 @@ hyperparams:
   architecture:
     backbone_dense_nodes: 2048
     pen_nodes: 64
-
-path:
-  metrics_dir: ./results
-

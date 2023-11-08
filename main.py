@@ -34,7 +34,15 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
-    configs =  parse_config(parser.parse_args().config)
+    parser.add_argument('--results-dir', required=True)
+
+    args = parser.parse_args()
+
+
+    config_file = args.config
+    results_dir = args.results_dir
+
+    configs =  parse_config(config_file)
 
     architecture_backbone = configs['architecture']['backbone']
     hyper_architecture = configs['hyperparams']['architecture']
@@ -49,7 +57,7 @@ if __name__ == '__main__':
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
 
-    path_metrics_dir = str(configs['path']['metrics_dir'])
+    path_metrics_dir = str(results_dir)
     if os.path.exists(path_metrics_dir):
         shutil.rmtree(path_metrics_dir)
     os.mkdir(path_metrics_dir)
