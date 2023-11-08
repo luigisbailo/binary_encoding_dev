@@ -64,7 +64,10 @@ if __name__ == '__main__':
     for i in range(samples):
         print('Sample: ', i)
         classifier = classifier = getattr(nn, architecture_backbone)(
-            pen_lin_nodes=hyper_architecture['pen_lin_nodes'], pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
+            pen_lin_nodes=hyper_architecture['pen_nodes'], 
+            pen_nonlin_nodes=None, 
+            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            ).to(device)
         results.append(
             train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=True, verbose=verbose)
             )
@@ -84,7 +87,10 @@ if __name__ == '__main__':
     for i in range(samples):
         print('Sample: ', i)        
         classifier = getattr(nn, architecture_backbone)(
-            pen_lin_nodes=hyper_architecture['pen_lin_nodes'], pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
+            pen_lin_nodes=hyper_architecture['pen_nodes'], 
+            pen_nonlin_nodes=None,
+            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            ).to(device)
         results.append(
             train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose)
             )
@@ -103,7 +109,11 @@ if __name__ == '__main__':
     results = []
     for i in range(samples):    
         print('Sample: ', i)        
-        classifier = getattr(nn, architecture_backbone)(pen_lin_nodes=None, pen_nonlin_nodes=None).to(device)
+        classifier = getattr(nn, architecture_backbone)(
+            pen_lin_nodes=None, 
+            pen_nonlin_nodes=None,
+            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            ).to(device)
         results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:
@@ -121,7 +131,10 @@ if __name__ == '__main__':
     for i in range(samples):
         print('Sample: ', i)        
         classifier = getattr(nn, architecture_backbone)(
-            pen_lin_nodes=None, pen_nonlin_nodes=hyper_architecture['pen_nonlin_nodes']).to(device)
+            pen_lin_nodes=None, 
+            pen_nonlin_nodes=hyper_architecture['pen_nodes'],
+            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            ).to(device)
         results.append(train_classifier(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose))
     for key in results[0].keys():
         try:

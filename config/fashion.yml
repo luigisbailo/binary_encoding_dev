@@ -2,7 +2,7 @@ dataset:
   name: FashionMNIST
 
 architecture:
-  backbone: VG11
+  backbone: VGG11
 
 hyperparams:
   train:
@@ -15,8 +15,8 @@ hyperparams:
     step_scheduler: 5
     samples: 3
   architecture:
-    pen_lin_nodes: 128
-    pen_nonlin_nodes: 1024
+    backbone_dense_nodes: 1024
+    pen_nodes: 128
 
 path:
   metrics_dir: ./results

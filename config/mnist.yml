@@ -2,7 +2,7 @@ dataset:
   name: MNIST
 
 architecture:
-  backbone: VG11
+  backbone: MLPvanilla
 
 hyperparams:
   train:
@@ -15,8 +15,8 @@ hyperparams:
     step_scheduler: 5
     samples: 3
   architecture:
-    pen_lin_nodes: 64
-    pen_nonlin_nodes: 2048
+    backbone_dense_nodes: 2048
+    pen_nodes: 64
 
 path:
   metrics_dir: ./results
