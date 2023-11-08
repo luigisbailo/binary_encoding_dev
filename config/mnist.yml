@@ -1,12 +1,12 @@
 dataset:
-  name: FashionMNIST
+  name: MNIST
 
 architecture:
   backbone: VG11
 
 hyperparams:
   train:
-    batch_size: 128
+    batch_size: 64
     epochs: 101
     lr: 0.0001
     loss_pen_factor: 10
@@ -15,8 +15,8 @@ hyperparams:
     step_scheduler: 5
     samples: 3
   architecture:
-    pen_lin_nodes: 128
-    pen_nonlin_nodes: 1024
+    pen_lin_nodes: 64
+    pen_nonlin_nodes: 2048
 
 path:
   metrics_dir: ./results
