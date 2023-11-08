@@ -2,7 +2,7 @@ dataset:
   name: FashionMNIST
 
 architecture:
-  backbone: VGG11
+  backbone: MLPconvs
 
 hyperparams:
   train:

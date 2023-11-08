@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class Classifier(nn.Module):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024, input_dims=784):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
     
         super(Classifier, self).__init__()
 
@@ -13,15 +13,17 @@ class Classifier(nn.Module):
         self.backbone_dense_nodes = backbone_dense_nodes
         self.pen_lin_nodes = pen_lin_nodes
         self.pen_nonlin_nodes = pen_nonlin_nodes
-        self.input_dims = input_dims
                
+    
+    def make_backbone_dense_layers (self, input_dims):
+
         self.backbone_dense_layers = nn.Sequential(
-            nn.Linear(self.input_dims, self.backbone_dense_nodes),
+            nn.Linear(input_dims, self.backbone_dense_nodes),
             nn.ReLU(),
-            nn.Dropout(p=dropout),
+            nn.Dropout(p=self.dropout),
             nn.Linear(self.backbone_dense_nodes, self.backbone_dense_nodes),
             nn.ReLU(),
-            nn.Dropout(p=dropout),
+            nn.Dropout(p=self.dropout),
             nn.Linear(self.backbone_dense_nodes, self.backbone_dense_nodes),
             nn.ReLU(),
             )     
@@ -67,10 +69,11 @@ class Classifier(nn.Module):
 
 class MLPvanilla (Classifier):
    
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024, input_dims=784):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
          
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, input_dims)
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
         
+        self.make_backbone_dense_layers (input_dims=784)
         self.pen_layer, self.output_layer = self.get_penultimate()
         
     def forward(self, x):
@@ -81,11 +84,11 @@ class MLPvanilla (Classifier):
 
 
 
-class VGG11(Classifier):
-    
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024, input_dims=784):
+class MLPconvs(Classifier):
 
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, input_dims)
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
+
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
@@ -102,7 +105,8 @@ class VGG11(Classifier):
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
             nn.ReLU(),
         )
-        
+
+        self.make_backbone_dense_layers (input_dims=512*3*3)
         self.pen_layer, self.output_layer = self.get_penultimate()
             
         
