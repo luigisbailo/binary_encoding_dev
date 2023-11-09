@@ -15,4 +15,4 @@ The following piece of code reproduces results presented in the manuscript:
 python main.py --config config/mnist.yml --results-dir ./results_mnist
 python main.py --config config/fashion.yml --reuslts-dir ./results_fashion
 ```
-Metrics collected during trainings on the MNIST and FashinMNIST are saved respectively in the './results_mnist' and './results_fashion' directories.
+Metrics collected during trainings on the MNIST and FashinMNIST datasets are saved respectively in the './results_mnist' and './results_fashion' directories.
