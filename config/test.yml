@@ -17,5 +17,5 @@ hyperparams:
     optimizer: SGD
 
   architecture:
-    backbone_dense_nodes: [2048,2048]
-    pen_nodes: 128
+    backbone_dense_nodes: [2048,2048,1024]
+    pen_nodes: 64

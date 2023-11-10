@@ -22,7 +22,8 @@ class Classifier(nn.Module):
         for i in range(len(l_nodes)-1):
             l_layers.append(nn.Linear(l_nodes[i],l_nodes[i+1]))
             l_layers.append(nn.ReLU())
-            l_layers.append(nn.Dropout(p=self.dropout))
+            if (i<len(l_nodes)-2):
+                l_layers.append(nn.Dropout(p=self.dropout))
 
         self.backbone_dense_layers = nn.Sequential(*l_layers)
 
