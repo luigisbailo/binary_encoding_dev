@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import scipy
 from sklearn.mixture import GaussianMixture
+import importlib
 
 class Trainer ():
     
@@ -14,6 +15,7 @@ class Trainer ():
         self.testset = testset
         self.binenc_loss = binenc_loss
         self.verbose = verbose
+        self.optimizer = hyper_train['optimizer']
         self.batch_size = hyper_train['batch_size']
         self.epochs = hyper_train['epochs']
         self.step_scheduler = hyper_train['step_scheduler']
@@ -26,7 +28,13 @@ class Trainer ():
 
         trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size, shuffle=True )
         
-        opt = torch.optim.Adam(self.network.parameters(), lr=self.lr)
+        torch_module= importlib.import_module("torch.optim")
+
+        if (self.optimizer == 'SGD'):
+            opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
+        else:
+            opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr)
+
         scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.step_scheduler, gamma=0.5)
         res_list = []
         res_training = {}
