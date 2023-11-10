@@ -55,7 +55,7 @@ class Trainer ():
                 loss.backward()
                 opt.step()
             
-            if epoch%self.logging==0 :
+            if epoch%self.logging==0 and epoch!=0:
                 if self.verbose:
                     print('Epoch: ', epoch)
                 save_pen = False
