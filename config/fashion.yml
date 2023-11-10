@@ -15,5 +15,5 @@ hyperparams:
     step_scheduler: 5
     samples: 3
   architecture:
-    backbone_dense_nodes: 1024
+    backbone_dense_nodes: [4096,4096]
     pen_nodes: 128

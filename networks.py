@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class Classifier(nn.Module):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024]):
     
         super(Classifier, self).__init__()
 
@@ -13,36 +13,34 @@ class Classifier(nn.Module):
         self.backbone_dense_nodes = backbone_dense_nodes
         self.pen_lin_nodes = pen_lin_nodes
         self.pen_nonlin_nodes = pen_nonlin_nodes
-               
-    
+            
     def make_backbone_dense_layers (self, input_dims):
 
-        self.backbone_dense_layers = nn.Sequential(
-            nn.Linear(input_dims, self.backbone_dense_nodes),
-            nn.ReLU(),
-            nn.Dropout(p=self.dropout),
-            nn.Linear(self.backbone_dense_nodes, self.backbone_dense_nodes),
-            nn.ReLU(),
-            nn.Dropout(p=self.dropout),
-            nn.Linear(self.backbone_dense_nodes, self.backbone_dense_nodes),
-            nn.ReLU(),
-            )     
+        l_layers = nn.ModuleList ()
+        l_nodes = [input_dims] + self.backbone_dense_nodes
+ 
+        for i in range(len(l_nodes)-1):
+            l_layers.append(nn.Linear(l_nodes[i],l_nodes[i+1]))
+            l_layers.append(nn.ReLU())
+            l_layers.append(nn.Dropout(p=self.dropout))
+
+        self.backbone_dense_layers = nn.Sequential(*l_layers)
 
 
     def get_penultimate (self):
 
         if self.pen_lin_nodes:
-            pen_layer = nn.Linear(in_features=self.backbone_dense_nodes, out_features=self.pen_lin_nodes)
+            pen_layer = nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.pen_lin_nodes)
             output_layer = nn.Linear(in_features=self.pen_lin_nodes, out_features=self.num_classes)
         elif self.pen_nonlin_nodes:
             pen_layer = nn.Sequential(
-                nn.Linear(in_features=self.backbone_dense_nodes, out_features=self.pen_nonlin_nodes),
+                nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.pen_nonlin_nodes),
                 nn.ReLU()           
             )
             output_layer = nn.Linear(in_features=self.pen_nonlin_nodes, out_features=self.num_classes)
         else:
             pen_layer = None
-            output_layer = nn.Linear(in_features=self.backbone_dense_nodes, out_features=self.num_classes)    
+            output_layer = nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.num_classes)    
 
         return pen_layer, output_layer
 
@@ -69,7 +67,7 @@ class Classifier(nn.Module):
 
 class MLPvanilla (Classifier):
    
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024,1024]):
          
         super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
         
@@ -86,7 +84,7 @@ class MLPvanilla (Classifier):
 
 class MLPconvs(Classifier):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024,1024]):
 
         super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
 
@@ -120,7 +118,7 @@ class MLPconvs(Classifier):
 
 class VGG11(Classifier):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=1024):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[4096,4096]):
 
         super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
 
