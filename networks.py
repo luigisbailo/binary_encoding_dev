@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
+import importlib
 
 class Classifier(nn.Module):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024]):
+    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024], activation='ReLU'):
     
         super(Classifier, self).__init__()
+
+        torch_module= importlib.import_module("torch.nn")
 
         self.in_channels = 1
         self.num_classes = 10
@@ -13,7 +16,8 @@ class Classifier(nn.Module):
         self.backbone_dense_nodes = backbone_dense_nodes
         self.pen_lin_nodes = pen_lin_nodes
         self.pen_nonlin_nodes = pen_nonlin_nodes
-            
+        self.activation = getattr(torch_module, activation)
+
     def make_backbone_dense_layers (self, input_dims):
 
         l_layers = nn.ModuleList ()
@@ -21,9 +25,9 @@ class Classifier(nn.Module):
  
         for i in range(len(l_nodes)-1):
             l_layers.append(nn.Linear(l_nodes[i],l_nodes[i+1]))
-            l_layers.append(nn.ReLU())
-            if (i<len(l_nodes)-2):
-                l_layers.append(nn.Dropout(p=self.dropout))
+            l_layers.append(self.activation())
+            # if (i<len(l_nodes)-2):
+            l_layers.append(nn.Dropout(p=self.dropout))
 
         self.backbone_dense_layers = nn.Sequential(*l_layers)
 
@@ -36,7 +40,7 @@ class Classifier(nn.Module):
         elif self.pen_nonlin_nodes:
             pen_layer = nn.Sequential(
                 nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.pen_nonlin_nodes),
-                nn.ReLU()           
+                self.activation()           
             )
             output_layer = nn.Linear(in_features=self.pen_nonlin_nodes, out_features=self.num_classes)
         else:
@@ -91,18 +95,18 @@ class MLPconvs(Classifier):
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.ReLU(),
+            self.activation(),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.ReLU(),
+            self.activation(),
         )
 
         self.make_backbone_dense_layers (input_dims=512*3*3)
@@ -126,32 +130,32 @@ class VGG11(Classifier):
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            self.activation(),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            self.activation(),
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            self.activation(),
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
 

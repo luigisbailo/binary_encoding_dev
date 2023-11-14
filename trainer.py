@@ -4,6 +4,7 @@ import torch.nn as nn
 import scipy
 from sklearn.mixture import GaussianMixture
 import importlib
+import sys
 
 class Trainer ():
     
@@ -21,6 +22,7 @@ class Trainer ():
         self.step_scheduler = hyper_train['step_scheduler']
         self.lr = hyper_train['lr']
         self.loss_pen_factor = hyper_train['loss_pen_factor']
+        self.loss_pen_funct = hyper_train['loss_pen_funct']
         self.logging_pen = hyper_train['logging_pen']
         self.logging = hyper_train['logging']
 
@@ -50,7 +52,13 @@ class Trainer ():
                 loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
                 loss = loss_class 
                 if self.binenc_loss:
-                    loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean'))
+                    if self.loss_pen_funct == 'exp_mse':
+                        loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean'))
+                    elif self.loss_pen_funct == 'mse':
+                        loss_pen = nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean')
+                    else:
+                        print("Error: penultimate loss not available")
+                        sys.exit(1)
                     loss = loss + self.loss_pen_factor*loss_pen
                     
                 loss.backward()
@@ -63,7 +71,7 @@ class Trainer ():
                 if self.logging_pen>0 and epoch%self.logging_pen==0:
                     save_pen = True
 
-                res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=True)
+                res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=False)
 
                 res_list.append(res_epoch)
 
