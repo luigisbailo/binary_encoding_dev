@@ -32,20 +32,20 @@ class Classifier(nn.Module):
         self.backbone_dense_layers = nn.Sequential(*l_layers)
 
 
-    def get_penultimate (self):
+    def get_penultimate (self, input_dims):
 
         if self.pen_lin_nodes:
-            pen_layer = nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.pen_lin_nodes)
+            pen_layer = nn.Linear(in_features=input_dims, out_features=self.pen_lin_nodes)
             output_layer = nn.Linear(in_features=self.pen_lin_nodes, out_features=self.num_classes)
         elif self.pen_nonlin_nodes:
             pen_layer = nn.Sequential(
-                nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.pen_nonlin_nodes),
+                nn.Linear(in_features=input_dims, out_features=self.pen_nonlin_nodes),
                 self.activation()           
             )
             output_layer = nn.Linear(in_features=self.pen_nonlin_nodes, out_features=self.num_classes)
         else:
             pen_layer = None
-            output_layer = nn.Linear(in_features=self.backbone_dense_nodes[-1], out_features=self.num_classes)    
+            output_layer = nn.Linear(in_features=input_dims, out_features=self.num_classes)    
 
         return pen_layer, output_layer
 
@@ -75,11 +75,11 @@ class MLPvanilla (Classifier):
    
     def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024,1024], activation='ReLU'):
          
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, activation)
         
-        if self.backbone_dense_layers:
+        if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=784)
-        self.pen_layer, self.output_layer = self.get_penultimate()
+        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=784)
         
     def forward(self, x):
         
@@ -93,7 +93,7 @@ class MLPconvs(Classifier):
 
     def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[1024,1024], activation='ReLU'):
 
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, activation)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
@@ -110,14 +110,14 @@ class MLPconvs(Classifier):
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
             self.activation(),
         )
-        if self.backbone_dense_layers:
+        if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*3*3)
-        self.pen_layer, self.output_layer = self.get_penultimate()
+        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*3*3)
             
         
     def forward(self, x):
 
-        x = self.backbone_conv_layers(x)    
+        x = self.backbone_dense_nodes(x)    
         x = torch.flatten(x, start_dim=1)
 
         return self.from_conv_forward(x)
@@ -127,7 +127,7 @@ class VGG11(Classifier):
 
     def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[4096,4096], activation='ReLU'):
 
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, activation)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
@@ -167,9 +167,9 @@ class VGG11(Classifier):
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
 
-        if self.backbone_dense_layers:
+        if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*1*1)
-        self.pen_layer, self.output_layer = self.get_penultimate()
+        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
             
         
     def forward(self, x):
@@ -184,7 +184,7 @@ class VGG13(Classifier):
 
     def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5, backbone_dense_nodes=[4096,4096], activation='ReLU'):
 
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes)
+        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout, backbone_dense_nodes, activation)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
@@ -224,9 +224,10 @@ class VGG13(Classifier):
             self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
-        if self.backbone_dense_layers:
+
+        if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*1*1)
-        self.pen_layer, self.output_layer = self.get_penultimate()
+        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
             
         
     def forward(self, x):
@@ -235,4 +236,5 @@ class VGG13(Classifier):
         x = torch.flatten(x, start_dim=1)
 
         return self.from_conv_forward(x)
+
 
