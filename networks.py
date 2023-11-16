@@ -112,7 +112,10 @@ class MLPconvs(Classifier):
         )
         if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*3*3)
-        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*3*3)
+            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+    
+        else:
+            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*3*3)
             
         
     def forward(self, x):
@@ -169,7 +172,9 @@ class VGG11(Classifier):
 
         if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*1*1)
-        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
+            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+        else:
+            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
             
         
     def forward(self, x):
@@ -226,8 +231,12 @@ class VGG13(Classifier):
         )
 
         if self.backbone_dense_nodes:
+        
             self.make_backbone_dense_layers (input_dims=512*1*1)
-        self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
+            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+    
+        else:
+            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
             
         
     def forward(self, x):
