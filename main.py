@@ -25,6 +25,17 @@ def parse_config(config_file):
         print(f"Error parsing config file: {e}")
         sys.exit(1)
 
+def compute_mean_std(dataset):
+
+    loader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=False)
+    
+    data = next(iter(loader))[0].numpy()
+
+    mean = np.mean(data, axis=(0, 2, 3))
+    std = np.std(data, axis=(0, 2, 3))
+
+    return mean, std
+
 if __name__ == '__main__':
 
     verbose = True
@@ -44,26 +55,38 @@ if __name__ == '__main__':
 
     configs =  parse_config(config_file)
 
+    configs_architecture = configs['architecture']
     architecture_backbone = configs['architecture']['backbone']
-    hyper_architecture = configs['hyperparams']['architecture']
-    hyper_train = configs['hyperparams']['train']
-    samples = configs['hyperparams']['train']['samples']
+
+    hyper_architecture = configs['architecture']['hyperparams']
+    hyper_train = configs['training']['hyperparams']
+    pen_nodes = hyper_architecture['pen_nodes']
+    samples = hyper_train['samples']
 
     name_dataset = configs['dataset']['name']    
     torch_module= importlib.import_module("torchvision.datasets")
     torch_dataset = getattr(torch_module, name_dataset)
 
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    transform = transforms.Compose([transforms.ToTensor()])
+
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
+
+    trainset_mean, trainset_std = compute_mean_std(trainset)
+
+    transform_normalized = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(trainset_mean, trainset_std)
+    ])
+
+    trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform_normalized)
+    testset = torch_dataset ("./dataset", train=False, download=True, transform=transform_normalized)
 
     path_metrics_dir = str(results_dir)
     if os.path.exists(path_metrics_dir):
         shutil.rmtree(path_metrics_dir)
     os.mkdir(path_metrics_dir)
 
-
-    
 
 
     print('Training binary encoding architecture:')
@@ -72,9 +95,9 @@ if __name__ == '__main__':
     for i in range(samples):
         print('Sample: ', i)
         classifier = classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=hyper_architecture['pen_nodes'], 
+            pen_lin_nodes=pen_nodes, 
             pen_nonlin_nodes=None, 
-            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            hyper_architecture=hyper_architecture,
             ).to(device)
         results.append(
             Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=True, verbose=verbose).fit()
@@ -95,9 +118,9 @@ if __name__ == '__main__':
     for i in range(samples):
         print('Sample: ', i)        
         classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=hyper_architecture['pen_nodes'], 
+            pen_lin_nodes=pen_nodes, 
             pen_nonlin_nodes=None,
-            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            hyper_architecture=hyper_architecture,
             ).to(device)
         results.append(
             Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()
@@ -120,7 +143,7 @@ if __name__ == '__main__':
         classifier = getattr(networks, architecture_backbone)(
             pen_lin_nodes=None, 
             pen_nonlin_nodes=None,
-            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            hyper_architecture=hyper_architecture,
             ).to(device)
         results.append(
             Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()
@@ -142,8 +165,8 @@ if __name__ == '__main__':
         print('Sample: ', i)        
         classifier = getattr(networks, architecture_backbone)(
             pen_lin_nodes=None, 
-            pen_nonlin_nodes=hyper_architecture['pen_nodes'],
-            backbone_dense_nodes=hyper_architecture['backbone_dense_nodes']
+            pen_nonlin_nodes=pen_nodes,
+            hyper_architecture=hyper_architecture,
             ).to(device)
         results.append(
             Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()

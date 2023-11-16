@@ -3,19 +3,21 @@ dataset:
 
 architecture:
   backbone: MLPvanilla
-
-hyperparams:
-  train:
-    batch_size: 64
-    epochs: 10
-    lr: 0.01
-    loss_pen_factor: 10
-    logging_pen: 0
-    logging: 2
-    step_scheduler: 5
-    samples: 2
-    optimizer: SGD
-
-  architecture:
+  hyperparams:
     backbone_dense_nodes: [2048,2048,1024]
     pen_nodes: 64
+    activation: ReLU
+
+training:
+  hyperparams:
+      batch_size: 64
+      epochs: 10
+      lr: 0.01
+      loss_pen_factor: 10
+      loss_pen_funct: mse
+      logging_pen: 0
+      logging: 2
+      step_scheduler: 5
+      samples: 2
+      optimizer: SGD
+
