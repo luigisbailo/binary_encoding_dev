@@ -58,10 +58,10 @@ if __name__ == '__main__':
     configs_architecture = configs['architecture']
     architecture_backbone = configs['architecture']['backbone']
 
-    hyper_architecture = configs['architecture']['hyperparams']
-    hyper_train = configs['training']['hyperparams']
-    pen_nodes = hyper_architecture['pen_nodes']
-    samples = hyper_train['samples']
+    architecture = configs['architecture']
+    training_hyperparams = configs['training']['hyperparams']
+    training_models = configs['training']['models']
+    samples = training_hyperparams['samples']
 
     name_dataset = configs['dataset']['name']    
     torch_module= importlib.import_module("torchvision.datasets")
@@ -87,94 +87,32 @@ if __name__ == '__main__':
         shutil.rmtree(path_metrics_dir)
     os.mkdir(path_metrics_dir)
 
+    for model in training_models:
 
+        print('Training ' + str(model) + ' architecture:')
+        res_dict= {}
+        results_sample = []
+        
+        for i in range(samples):
+            print('Sample: ', i)
+            classifier = getattr(networks, architecture_backbone)(
+                model=model,
+                architecture=architecture,
+                ).to(device)
+            results_sample.append(
+                Trainer(device=device, 
+                        network=classifier, 
+                        trainset=trainset, 
+                        testset=testset, 
+                        training_hyperparams=training_hyperparams, 
+                        model=model, 
+                        verbose=verbose).fit()
+                )
+        for key in results_sample[0].keys():
+            try:
+                res_dict[key] = np.hstack([res[key] for res in results_sample])
+            except:
+                res_dict[key] = res_dict[0][key]
+        with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
+            pickle.dump(res_dict, file)
 
-    print('Training binary encoding architecture:')
-    res_binenc = {}
-    results = []
-    for i in range(samples):
-        print('Sample: ', i)
-        classifier = classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=pen_nodes, 
-            pen_nonlin_nodes=None, 
-            hyper_architecture=hyper_architecture,
-            ).to(device)
-        results.append(
-            Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=True, verbose=verbose).fit()
-            )
-    for key in results[0].keys():
-        try:
-            res_binenc[key] = np.hstack([res[key] for res in results])
-        except:
-            res_binenc[key] = results[0][key]
-    with open (path_metrics_dir + '/res_binenc.pkl', 'wb') as file:
-        pickle.dump(res_binenc, file)
-
-
-
-    print('Training linear penultimate architecture')
-    res_linpen = {}
-    results = []
-    for i in range(samples):
-        print('Sample: ', i)        
-        classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=pen_nodes, 
-            pen_nonlin_nodes=None,
-            hyper_architecture=hyper_architecture,
-            ).to(device)
-        results.append(
-            Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()
-            )
-    for key in results[0].keys():
-        try:
-            res_linpen[key] = np.hstack([res[key] for res in results ])
-        except:
-            res_linpen[key] = results[0][key]
-    with open (path_metrics_dir + '/res_linpen.pkl', 'wb') as file:
-        pickle.dump(res_linpen, file)
-
-
-
-    print('Training no penultimate architecture')
-    res_nopen = {}
-    results = []
-    for i in range(samples):    
-        print('Sample: ', i)        
-        classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=None, 
-            pen_nonlin_nodes=None,
-            hyper_architecture=hyper_architecture,
-            ).to(device)
-        results.append(
-            Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()
-            )
-    for key in results[0].keys():
-        try:
-            res_nopen[key] = np.hstack([res[key] for res in results ])
-        except:
-            res_nopen[key] = results[0][key]
-    with open (path_metrics_dir + '/res_nopen.pkl', 'wb') as file:
-        pickle.dump(res_nopen, file)        
-
-
-
-    print('Training non-linear penultimate architecture')
-    res_nonlinpen = {}
-    results = []
-    for i in range(samples):
-        print('Sample: ', i)        
-        classifier = getattr(networks, architecture_backbone)(
-            pen_lin_nodes=None, 
-            pen_nonlin_nodes=pen_nodes,
-            hyper_architecture=hyper_architecture,
-            ).to(device)
-        results.append(
-            Trainer(device, classifier, trainset, testset, hyper_train, binenc_loss=False, verbose=verbose).fit()
-            )
-    for key in results[0].keys():
-        try:
-            res_nonlinpen[key] = np.hstack([res[key] for res in results ])
-        except:
-            res_nonlinpen[key] = results[0][key]
-    with open (path_metrics_dir + '/res_nonlinpen.pkl', 'wb') as file:
-        pickle.dump(res_nonlinpen, file)

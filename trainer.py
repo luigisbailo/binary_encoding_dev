@@ -8,23 +8,27 @@ import sys
 
 class Trainer ():
     
-    def __init__(self, device, network, trainset, testset, hyper_train, binenc_loss=True, verbose=True):
+    def __init__(self, device, network, trainset, testset, training_hyperparams, model, verbose=True):
 
         self.device = device
         self.network = network
         self.trainset = trainset
         self.testset = testset
-        self.binenc_loss = binenc_loss
         self.verbose = verbose
-        self.optimizer = hyper_train['optimizer']
-        self.batch_size = hyper_train['batch_size']
-        self.epochs = hyper_train['epochs']
-        self.step_scheduler = hyper_train['step_scheduler']
-        self.lr = hyper_train['lr']
-        self.loss_pen_factor = hyper_train['loss_pen_factor']
-        self.loss_pen_funct = hyper_train['loss_pen_funct']
-        self.logging_pen = hyper_train['logging_pen']
-        self.logging = hyper_train['logging']
+        self.optimizer = training_hyperparams['optimizer']
+        self.batch_size = training_hyperparams['batch_size']
+        self.epochs = training_hyperparams['epochs']
+        self.step_scheduler = training_hyperparams['step_scheduler']
+        self.lr = training_hyperparams['lr']
+        self.loss_pen_factor = training_hyperparams['loss_pen_factor']
+        self.loss_pen_funct = training_hyperparams['loss_pen_funct']
+        self.logging_pen = training_hyperparams['logging_pen']
+        self.logging = training_hyperparams['logging']
+
+        if model == 'bin_enc':
+            self.binenc_loss = True
+        else:
+            self.binenc_loss = False
 
     def fit (self):
 
@@ -35,10 +39,10 @@ class Trainer ():
         if (self.optimizer == 'SGD'):
             opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
         else:
-            opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr)
+            opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr, amsgrad=True)
 
         if self.step_scheduler:
-            scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.step_scheduler, gamma=0.5)
+            scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.step_scheduler, gamma=0.99)
         res_list = []
         res_training = {}
 

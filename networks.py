@@ -4,20 +4,29 @@ import importlib
 
 class Classifier(nn.Module):
 
-    def __init__ (self, hyper_architecture, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5):
+    def __init__ (self, model, architecture, dropout=0.5):
     
         super(Classifier, self).__init__()
 
         torch_module= importlib.import_module("torch.nn")
 
-        self.backbone_dense_nodes= hyper_architecture['backbone_dense_nodes']
-        self.activation=hyper_architecture['activation']
-        
+        self.backbone_dense_nodes= architecture['hyperparams']['backbone_dense_nodes']
+        self.activation= architecture['hyperparams']['activation']
+        pen_nodes = architecture['hyperparams']['pen_nodes']
+
+        if model == 'bin_enc' or model == 'lin_pen':
+            self.pen_lin_nodes = pen_nodes
+            self.pen_nonlin_nodes = None
+        elif model == 'no_pen':
+            self.pen_lin_nodes = None
+            self.pen_nonlin_nodes = None
+        elif model == 'nonlin_pen':
+            self.pen_lin_nodes = None
+            self.pen_nonlin_nodes = pen_nodes
+
         self.in_channels = 1
         self.num_classes = 10
         self.dropout = dropout
-        self.pen_lin_nodes = pen_lin_nodes
-        self.pen_nonlin_nodes = pen_nonlin_nodes
         self.activation = getattr(torch_module, self.activation)
 
     def make_backbone_dense_layers (self, input_dims):
@@ -75,9 +84,9 @@ class Classifier(nn.Module):
 
 class MLPvanilla (Classifier):
    
-    def __init__ (self, hyper_architecture, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5):
+    def __init__ (self,  model, architecture, dropout=0.5):
          
-        super().__init__(hyper_architecture, pen_lin_nodes, pen_nonlin_nodes, dropout)
+        super().__init__( model, architecture,  dropout)
         
         self.make_backbone_dense_layers (input_dims=784)
         self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
@@ -92,9 +101,9 @@ class MLPvanilla (Classifier):
 
 class MLPconvs(Classifier):
 
-    def __init__ (self, hyper_architecture, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5):
+    def __init__ (self,  model, architecture,  dropout=0.5):
 
-        super().__init__(hyper_architecture, pen_lin_nodes, pen_nonlin_nodes, dropout)
+        super().__init__( model, architecture,  dropout)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
@@ -129,9 +138,9 @@ class MLPconvs(Classifier):
 
 class VGG11(Classifier):
 
-    def __init__ (self,hyper_architecture, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5):
+    def __init__ (self, model, architecture, dropout=0.5):
 
-        super().__init__( hyper_architecture, pen_lin_nodes, pen_nonlin_nodes, dropout)
+        super().__init__( model, architecture,  dropout)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
@@ -188,9 +197,9 @@ class VGG11(Classifier):
 
 class VGG13(Classifier):
 
-    def __init__ (self, pen_lin_nodes = 128, pen_nonlin_nodes = None, dropout=0.5):
+    def __init__ (self,  model, architecture, dropout=0.5):
 
-        super().__init__( pen_lin_nodes, pen_nonlin_nodes, dropout)
+        super().__init__( model, architecture, dropout)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
