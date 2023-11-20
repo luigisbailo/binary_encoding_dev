@@ -10,19 +10,20 @@ architecture:
 
 training:
   models:
-    [bin_enc, lin_pen, no_pen, nonlin_pen]
+    [bin_enc]
 
   hyperparams:
     batch_size: 64
-    epochs: 4
+    epochs: 3
     lr: 0.01
     loss_pen_factor: 10
     loss_pen_funct: mse
     logging_pen: 0
     logging: 1
     step_scheduler: 5
-    samples: 2
+    samples: 1
     optimizer: SGD
 
 grid_search:
-  lr: [0.001, 0.005, 0.01]
+  lr: [0.001, 0.01]
+  loss_pen_factor: [1, 10]
