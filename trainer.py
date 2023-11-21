@@ -30,7 +30,7 @@ class Trainer ():
         else:
             self.binenc_loss = False
 
-    def fit (self):
+    def fit (self, patience=None):
 
         trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size, shuffle=True )
         
@@ -42,9 +42,14 @@ class Trainer ():
             opt = getattr(torch_module, self.optimizer)(self.network.parameters(), lr=self.lr, amsgrad=True)
 
         if self.step_scheduler:
-            scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.step_scheduler, gamma=0.99)
+            scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.step_scheduler, gamma=0.9)
         res_list = []
         res_training = {}
+
+        if patience==None:
+            patience=self.epochs
+        best_accuracy_test = float('inf')
+        counter = 0
 
         for epoch in range (self.epochs):
             for x,y in trainloader:
@@ -76,9 +81,17 @@ class Trainer ():
                     save_pen = True
 
                 res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=False)
-
                 res_list.append(res_epoch)
 
+                accuracy_test = res_epoch['accuracy_test']
+                if accuracy_test > best_accuracy_test:
+                    best_accuracy_test = best_accuracy_test
+                    counter = 0
+                else:
+                    counter += 1
+                if counter >= patience:
+                    break
+                
         for key in res_list[0].keys():
             res_training[key] = np.vstack([res_epoch [key] for res_epoch in res_list])
         

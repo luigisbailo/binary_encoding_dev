@@ -62,6 +62,7 @@ if __name__ == '__main__':
     samples = training_hyperparams['samples']
     grid_search = configs['grid_search']
     name_dataset = configs['dataset']['name']    
+    patience = 10
 
     torch_module= importlib.import_module("torchvision.datasets")
     torch_dataset = getattr(torch_module, name_dataset)
@@ -123,7 +124,7 @@ if __name__ == '__main__':
                             testset=testset, 
                             training_hyperparams=training_hyperparams_grid, 
                             model=model, 
-                            verbose=verbose).fit()
+                            verbose=verbose).fit(patience=patience)
                     )
             for key in results_sample[0].keys():
                 try:
@@ -133,7 +134,7 @@ if __name__ == '__main__':
             with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
                 pickle.dump(res_dict, file)
             
-            accuracy_test_convergence = res_dict['accuracy_test'][-2:]
+            accuracy_test_convergence = res_dict['accuracy_test'][-patience:]
             output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
 
             with open(path_metrics_dir + '/output.txt', 'a') as output_file:
