@@ -25,5 +25,7 @@ training:
     optimizer: SGD
 
 grid_search:
-  lr: [0.001, 0.01]
-  loss_pen_factor: [1, 10]
+  patience: 5
+  hypers:
+    lr: [0.001, 0.01]
+    loss_pen_factor: [1, 10]

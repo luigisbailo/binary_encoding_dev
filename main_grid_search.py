@@ -60,9 +60,9 @@ if __name__ == '__main__':
     training_hyperparams = configs['training']['hyperparams']
     training_models = configs['training']['models']
     samples = training_hyperparams['samples']
-    grid_search = configs['grid_search']
+    grid_search_hypers = configs['grid_search']['hypers']
+    grid_search_patience = configs['grid_search']['patience']
     name_dataset = configs['dataset']['name']    
-    patience = 10
 
     torch_module= importlib.import_module("torchvision.datasets")
     torch_dataset = getattr(torch_module, name_dataset)
@@ -93,8 +93,8 @@ if __name__ == '__main__':
             print(str(model) + ' architecture', file=output_file)
     
         training_hyperparams_grid = training_hyperparams
-        grid_keys = list(grid_search.keys())
-        grid_values = list(grid_search.values())
+        grid_keys = list(grid_search_hypers.keys())
+        grid_values = list(grid_search_hypers.values())
         combinations = product(*grid_values)
 
         with open(path_metrics_dir + '/output.txt', 'a') as output_file:
@@ -124,7 +124,7 @@ if __name__ == '__main__':
                             testset=testset, 
                             training_hyperparams=training_hyperparams_grid, 
                             model=model, 
-                            verbose=verbose).fit(patience=patience)
+                            verbose=verbose).fit(patience=grid_search_patience)
                     )
             for key in results_sample[0].keys():
                 try:
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
                 pickle.dump(res_dict, file)
             
-            accuracy_test_convergence = res_dict['accuracy_test'][-patience:]
+            accuracy_test_convergence = res_dict['accuracy_test'][-patience-1]
             output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
 
             with open(path_metrics_dir + '/output.txt', 'a') as output_file:
