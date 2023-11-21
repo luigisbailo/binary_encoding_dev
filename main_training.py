@@ -41,7 +41,12 @@ if __name__ == '__main__':
     verbose = True
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print("cuda available: ", torch.cuda.is_available())
+    if torch.cuda.is_available():
+        # Get the number of available GPUs
+        num_gpus = torch.cuda.device_count()
+        print(f"Number of GPUs available: {num_gpus}")
+    else:
+        print("CUDA is not available. Training on CPU.")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
@@ -98,7 +103,10 @@ if __name__ == '__main__':
             classifier = getattr(networks, architecture_backbone)(
                 model=model,
                 architecture=architecture,
-                ).to(device)
+                )
+            if torch.cuda.is_available():
+                classifier = torch.nn.DataParallel(classifier)
+            classifier = classifier.to(device)
             results_sample.append(
                 Trainer(device=device, 
                         network=classifier, 

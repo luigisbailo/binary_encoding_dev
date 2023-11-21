@@ -1,6 +1,7 @@
 import networks
 from trainer import Trainer
 
+
 import numpy as np
 import torch
 import torchvision
@@ -42,7 +43,12 @@ if __name__ == '__main__':
     verbose = True
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print("cuda available: ", torch.cuda.is_available())
+    if torch.cuda.is_available():
+        # Get the number of available GPUs
+        num_gpus = torch.cuda.device_count()
+        print(f"Number of GPUs available: {num_gpus}")
+    else:
+        print("CUDA is not available. Training on CPU.")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
@@ -116,7 +122,10 @@ if __name__ == '__main__':
                 classifier = getattr(networks, architecture_backbone)(
                     model=model,
                     architecture=architecture,
-                    ).to(device)
+                    )
+                if torch.cuda.is_available():
+                    classifier = torch.nn.DataParallel(classifier)
+                classifier = classifier.to(device)
                 results_sample.append(
                     Trainer(device=device, 
                             network=classifier, 
@@ -134,7 +143,7 @@ if __name__ == '__main__':
             with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
                 pickle.dump(res_dict, file)
             
-            accuracy_test_convergence = res_dict['accuracy_test'][-patience-1]
+            accuracy_test_convergence = res_dict['accuracy_test'][-grid_search_patience-1]
             output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
 
             with open(path_metrics_dir + '/output.txt', 'a') as output_file:

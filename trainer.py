@@ -15,6 +15,7 @@ class Trainer ():
         self.trainset = trainset
         self.testset = testset
         self.verbose = verbose
+        self.model = model
         self.optimizer = training_hyperparams['optimizer']
         self.batch_size = training_hyperparams['batch_size']
         self.epochs = training_hyperparams['epochs']
@@ -177,7 +178,7 @@ class Trainer ():
                 purity = []
                 peak_dist_train = []
 
-                if self.network.pen_lin_nodes:  
+                if self.model == 'bin_enc' or self.model == 'lin_pen':  
                     for d in range (pen_layer.shape[1]):
                         gmm = GaussianMixture(n_components=2)
                         gmm.fit(pen_layer_set[:,d].cpu().reshape(-1,1))
@@ -234,7 +235,7 @@ class Trainer ():
             accuracy_test = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()
             res['accuracy_test'] = accuracy_test
 
-            if self.verbose and self.network.pen_lin_nodes:
+            if self.model == 'bin_enc' or self.model == 'lin_pen':
                 if etfsimplex_metrics:
                     print(np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(purity, 6), '---',
                             np.around(sigma_w, 5), np.around(wclass_variation,5), np.around(equiangular, 5), np.around(maxangle, 5), np.around(equinorm, 5), '---', 
