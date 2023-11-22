@@ -44,7 +44,6 @@ if __name__ == '__main__':
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     if torch.cuda.is_available():
-        # Get the number of available GPUs
         num_gpus = torch.cuda.device_count()
         print(f"Number of GPUs available: {num_gpus}")
     else:
@@ -66,7 +65,6 @@ if __name__ == '__main__':
     architecture = configs['architecture']
     architecture_backbone = configs['architecture']['backbone']
     training_hyperparams = configs['training']['hyperparams']
-    # training_models = configs['training']['models']
     samples = training_hyperparams['samples']
     grid_search_hypers = configs['grid_search']['hypers']
     grid_search_patience = configs['grid_search']['patience']
@@ -126,7 +124,7 @@ if __name__ == '__main__':
                 )
             if torch.cuda.is_available():
                 classifier = torch.nn.DataParallel(classifier)
-            classifier = classifier.to(device)
+                classifier = classifier.to(device)
             results_sample.append(
                 Trainer(device=device, 
                         network=classifier, 

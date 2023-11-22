@@ -18,7 +18,6 @@ training:
     logging_pen: 0
     logging: 1
     step_scheduler: 5
-    samples: 2
     optimizer: SGD
 
 grid_search:

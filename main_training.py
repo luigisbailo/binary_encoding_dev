@@ -42,7 +42,6 @@ if __name__ == '__main__':
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     if torch.cuda.is_available():
-        # Get the number of available GPUs
         num_gpus = torch.cuda.device_count()
         print(f"Number of GPUs available: {num_gpus}")
     else:
@@ -52,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True)
     parser.add_argument('--results-dir', required=True)
     parser.add_argument('--model', required=True)
+    parser.add_argument('--sample', required=False)
 
     args = parser.parse_args()
 
@@ -59,6 +59,7 @@ if __name__ == '__main__':
     config_file = args.config
     results_dir = args.results_dir
     architecture_model = args.model
+    sample = args.sample
 
     configs =  parse_config(config_file)
 
@@ -67,7 +68,6 @@ if __name__ == '__main__':
 
     architecture = configs['architecture']
     training_hyperparams = configs['training']['hyperparams']
-    # training_models = configs['training']['models']
     samples = training_hyperparams['samples']
 
     name_dataset = configs['dataset']['name']    
@@ -99,29 +99,28 @@ if __name__ == '__main__':
     res_dict= {}
     results_sample = []
     
-    for i in range(samples):
-        print('Sample: ', i)
-        classifier = getattr(networks, architecture_backbone)(
-            model=architecture_model,
-            architecture=architecture,
-            )
-        if torch.cuda.is_available():
-            classifier = torch.nn.DataParallel(classifier)
+    classifier = getattr(networks, architecture_backbone)(
+        model=architecture_model,
+        architecture=architecture,
+        )
+    if torch.cuda.is_available():
+        classifier = torch.nn.DataParallel(classifier)
         classifier = classifier.to(device)
-        results_sample.append(
-            Trainer(device=device, 
-                    network=classifier, 
-                    trainset=trainset, 
-                    testset=testset, 
-                    training_hyperparams=training_hyperparams, 
-                    model=architecture_model, 
-                    verbose=verbose).fit()
-            )
-    for key in results_sample[0].keys():
-        try:
-            res_dict[key] = np.hstack([res[key] for res in results_sample])
-        except:
-            res_dict[key] = res_dict[0][key]
-    with open (path_metrics_dir + '/res_' + architecture_model +'.pkl', 'wb') as file:
+    results_sample.append(
+        Trainer(device=device, 
+                network=classifier, 
+                trainset=trainset, 
+                testset=testset, 
+                training_hyperparams=training_hyperparams, 
+                model=architecture_model, 
+                verbose=verbose).fit()
+        )
+
+    if sample:    
+        file_name = '/res_' + architecture_model + '_' + sample + '.pkl'
+    else:
+        file_name = '/res_' + architecture_model + '_' + '.pkl'
+
+    with open (path_metrics_dir + file_name, 'wb') as file:
         pickle.dump(res_dict, file)
 
