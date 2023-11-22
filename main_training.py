@@ -51,12 +51,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
     parser.add_argument('--results-dir', required=True)
+    parser.add_argument('--model', required=True)
 
     args = parser.parse_args()
 
 
     config_file = args.config
     results_dir = args.results_dir
+    architecture_model = args.model
 
     configs =  parse_config(config_file)
 
@@ -65,7 +67,7 @@ if __name__ == '__main__':
 
     architecture = configs['architecture']
     training_hyperparams = configs['training']['hyperparams']
-    training_models = configs['training']['models']
+    # training_models = configs['training']['models']
     samples = training_hyperparams['samples']
 
     name_dataset = configs['dataset']['name']    
@@ -92,35 +94,34 @@ if __name__ == '__main__':
         shutil.rmtree(path_metrics_dir)
     os.mkdir(path_metrics_dir)
 
-    for model in training_models:
 
-        print('Training ' + str(model) + ' architecture:')
-        res_dict= {}
-        results_sample = []
-        
-        for i in range(samples):
-            print('Sample: ', i)
-            classifier = getattr(networks, architecture_backbone)(
-                model=model,
-                architecture=architecture,
-                )
-            if torch.cuda.is_available():
-                classifier = torch.nn.DataParallel(classifier)
-            classifier = classifier.to(device)
-            results_sample.append(
-                Trainer(device=device, 
-                        network=classifier, 
-                        trainset=trainset, 
-                        testset=testset, 
-                        training_hyperparams=training_hyperparams, 
-                        model=model, 
-                        verbose=verbose).fit()
-                )
-        for key in results_sample[0].keys():
-            try:
-                res_dict[key] = np.hstack([res[key] for res in results_sample])
-            except:
-                res_dict[key] = res_dict[0][key]
-        with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
-            pickle.dump(res_dict, file)
+    print('Training ' + str(architecture_model) + ' architecture:')
+    res_dict= {}
+    results_sample = []
+    
+    for i in range(samples):
+        print('Sample: ', i)
+        classifier = getattr(networks, architecture_backbone)(
+            model=architecture_model,
+            architecture=architecture,
+            )
+        if torch.cuda.is_available():
+            classifier = torch.nn.DataParallel(classifier)
+        classifier = classifier.to(device)
+        results_sample.append(
+            Trainer(device=device, 
+                    network=classifier, 
+                    trainset=trainset, 
+                    testset=testset, 
+                    training_hyperparams=training_hyperparams, 
+                    model=architecture_model, 
+                    verbose=verbose).fit()
+            )
+    for key in results_sample[0].keys():
+        try:
+            res_dict[key] = np.hstack([res[key] for res in results_sample])
+        except:
+            res_dict[key] = res_dict[0][key]
+    with open (path_metrics_dir + '/res_' + architecture_model +'.pkl', 'wb') as file:
+        pickle.dump(res_dict, file)
 

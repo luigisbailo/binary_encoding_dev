@@ -53,18 +53,20 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
     parser.add_argument('--results-dir', required=True)
+    parser.add_argument('--model', required=True)
 
     args = parser.parse_args()
 
     config_file = args.config
     results_dir = args.results_dir
+    architecture_model = args.model
 
     configs =  parse_config(config_file)
 
     architecture = configs['architecture']
     architecture_backbone = configs['architecture']['backbone']
     training_hyperparams = configs['training']['hyperparams']
-    training_models = configs['training']['models']
+    # training_models = configs['training']['models']
     samples = training_hyperparams['samples']
     grid_search_hypers = configs['grid_search']['hypers']
     grid_search_patience = configs['grid_search']['patience']
@@ -88,64 +90,56 @@ if __name__ == '__main__':
         shutil.rmtree(path_metrics_dir)
     os.mkdir(path_metrics_dir)
 
-    with open(path_metrics_dir + '/output.txt', 'w') as output_file:
+    with open(path_metrics_dir + '/' + str(architecture_model) + '_gridsearch.txt', 'w') as output_file:
         print('Grid search', file=output_file)
 
-    for model in training_models:
 
-        print('Training ' + str(model) + ' architecture:')
-    
+    print('Training ' + str(architecture_model) + ' architecture:')
+
+    with open(path_metrics_dir + '/output.txt', 'a') as output_file:
+        print(str(architecture_model) + ' architecture', file=output_file)
+
+    training_hyperparams_grid = training_hyperparams
+    grid_keys = list(grid_search_hypers.keys())
+    grid_values = list(grid_search_hypers.values())
+    combinations = product(*grid_values)
+
+    with open(path_metrics_dir + '/output.txt', 'a') as output_file:
+        print(*grid_keys, sep='\t', file=output_file)
+
+    for combo in combinations:
+
+        res_dict= {}
+        results_sample = []
+        
+        grid_combination = dict(zip(grid_keys, combo))
+        print(grid_combination)
+        
+        for key in grid_keys:
+            training_hyperparams_grid[key] = grid_combination[key]
+
+        for i in range(samples):
+            print('Sample: ', i)
+            classifier = getattr(networks, architecture_backbone)(
+                model=architecture_model,
+                architecture=architecture,
+                )
+            if torch.cuda.is_available():
+                classifier = torch.nn.DataParallel(classifier)
+            classifier = classifier.to(device)
+            results_sample.append(
+                Trainer(device=device, 
+                        network=classifier, 
+                        trainset=trainset, 
+                        testset=testset, 
+                        training_hyperparams=training_hyperparams_grid, 
+                        model=architecture_model, 
+                        verbose=verbose).fit(patience=grid_search_patience)
+                )
+        
+        accuracy_test_convergence = [res_dict['accuracy_test'][-grid_search_patience-1] for res_dict in results_sample]
+        output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
+
         with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-            print(str(model) + ' architecture', file=output_file)
-    
-        training_hyperparams_grid = training_hyperparams
-        grid_keys = list(grid_search_hypers.keys())
-        grid_values = list(grid_search_hypers.values())
-        combinations = product(*grid_values)
-
-        with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-            print(*grid_keys, sep='\t', file=output_file)
-
-        for combo in combinations:
-
-            res_dict= {}
-            results_sample = []
-            
-            grid_combination = dict(zip(grid_keys, combo))
-            print(grid_combination)
-            
-            for key in grid_keys:
-                training_hyperparams_grid[key] = grid_combination[key]
-
-            for i in range(samples):
-                print('Sample: ', i)
-                classifier = getattr(networks, architecture_backbone)(
-                    model=model,
-                    architecture=architecture,
-                    )
-                if torch.cuda.is_available():
-                    classifier = torch.nn.DataParallel(classifier)
-                classifier = classifier.to(device)
-                results_sample.append(
-                    Trainer(device=device, 
-                            network=classifier, 
-                            trainset=trainset, 
-                            testset=testset, 
-                            training_hyperparams=training_hyperparams_grid, 
-                            model=model, 
-                            verbose=verbose).fit(patience=grid_search_patience)
-                    )
-            for key in results_sample[0].keys():
-                try:
-                    res_dict[key] = np.hstack([res[key] for res in results_sample])
-                except:
-                    res_dict[key] = res_dict[0][key]
-            with open (path_metrics_dir + '/res_' + model +'.pkl', 'wb') as file:
-                pickle.dump(res_dict, file)
-            
-            accuracy_test_convergence = res_dict['accuracy_test'][-grid_search_patience-1]
-            output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
-
-            with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-                print(*output_line, sep='\t', file=output_file)
+            print(*output_line, sep='\t', file=output_file)
 

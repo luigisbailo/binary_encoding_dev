@@ -9,9 +9,6 @@ architecture:
     activation: ReLU
 
 training:
-  models:
-    [bin_enc, lin_pen, no_pen, nonlin_pen]
-
   hyperparams:
     batch_size: 64
     epochs: 4
