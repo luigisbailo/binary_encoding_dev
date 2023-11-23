@@ -10,9 +10,9 @@ class Classifier(nn.Module):
 
         torch_module= importlib.import_module("torch.nn")
 
-        self.backbone_dense_nodes= architecture['hyperparams']['backbone_dense_nodes']
-        self.activation= architecture['hyperparams']['activation']
-        pen_nodes = architecture['hyperparams']['pen_nodes']
+        self.backbone_dense_nodes= architecture['hypers']['backbone_dense_nodes']
+        self.activation= architecture['hypers']['activation']
+        pen_nodes = architecture['hypers']['pen_nodes']
 
         if model == 'bin_enc' or model == 'lin_pen':
             self.pen_lin_nodes = pen_nodes

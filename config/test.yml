@@ -3,13 +3,13 @@ dataset:
 
 architecture:
   backbone: MLPvanilla
-  hyperparams:
+  hypers:
     backbone_dense_nodes: [2048]
     pen_nodes: 64
     activation: ReLU
 
 training:
-  hyperparams:
+  hypers:
     batch_size: 64
     epochs: 4
     lr: 0.01

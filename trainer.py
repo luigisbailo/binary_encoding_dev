@@ -8,23 +8,25 @@ import sys
 
 class Trainer ():
     
-    def __init__(self, device, network, trainset, testset, training_hyperparams, model, verbose=True):
+    def __init__(self, device, network, trainset, testset, training_hypers, model, etfsimplex_metrics=False, verbose=True):
 
         self.device = device
         self.network = network
         self.trainset = trainset
         self.testset = testset
-        self.verbose = verbose
         self.model = model
-        self.optimizer = training_hyperparams['optimizer']
-        self.batch_size = training_hyperparams['batch_size']
-        self.epochs = training_hyperparams['epochs']
-        self.step_scheduler = training_hyperparams['step_scheduler']
-        self.lr = training_hyperparams['lr']
-        self.loss_pen_factor = training_hyperparams['loss_pen_factor']
-        self.loss_pen_funct = training_hyperparams['loss_pen_funct']
-        self.logging_pen = training_hyperparams['logging_pen']
-        self.logging = training_hyperparams['logging']
+        self.etfsimplex_metrics=etfsimplex_metrics
+        self.verbose = verbose
+        
+        self.optimizer = training_hypers['optimizer']
+        self.batch_size = training_hypers['batch_size']
+        self.epochs = training_hypers['epochs']
+        self.step_scheduler = training_hypers['step_scheduler']
+        self.lr = training_hypers['lr']
+        self.loss_pen_factor = training_hypers['loss_pen_factor']
+        self.loss_pen_funct = training_hypers['loss_pen_funct']
+        self.logging_pen = training_hypers['logging_pen']
+        self.logging = training_hypers['logging']
 
         if model == 'bin_enc':
             self.binenc_loss = True
@@ -33,7 +35,7 @@ class Trainer ():
 
     def fit (self, patience=None):
 
-        trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size, shuffle=True )
+        trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size, shuffle=True)
         
         torch_module= importlib.import_module("torch.optim")
 
@@ -81,7 +83,7 @@ class Trainer ():
                 if self.logging_pen>0 and epoch%self.logging_pen==0:
                     save_pen = True
 
-                res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=False)
+                res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=self.etfsimplex_metrics)
 
                 accuracy_test = res_epoch['accuracy_test']
                 if accuracy_test > best_accuracy_test:

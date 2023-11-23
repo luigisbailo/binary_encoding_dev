@@ -1,7 +1,6 @@
 import networks
 from trainer import Trainer
 
-
 import numpy as np
 import torch
 import torchvision
@@ -53,19 +52,20 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True)
     parser.add_argument('--results-dir', required=True)
     parser.add_argument('--model', required=True)
+    parser.add_argument('--samples', required=True)
 
     args = parser.parse_args()
 
     config_file = args.config
     results_dir = args.results_dir
     architecture_model = args.model
+    samples = int(args.samples)
 
     configs =  parse_config(config_file)
 
     architecture = configs['architecture']
     architecture_backbone = configs['architecture']['backbone']
-    training_hyperparams = configs['training']['hyperparams']
-    samples = training_hyperparams['samples']
+    training_hypers = configs['training']['hypers']
     grid_search_hypers = configs['grid_search']['hypers']
     grid_search_patience = configs['grid_search']['patience']
     name_dataset = configs['dataset']['name']    
@@ -84,26 +84,21 @@ if __name__ == '__main__':
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform_normalized)
 
     path_metrics_dir = str(results_dir)
-    if os.path.exists(path_metrics_dir):
-        shutil.rmtree(path_metrics_dir)
-    os.mkdir(path_metrics_dir)
-
-    with open(path_metrics_dir + '/' + str(architecture_model) + '_gridsearch.txt', 'w') as output_file:
-        print('Grid search', file=output_file)
+    output_file = path_metrics_dir + '/' + str(architecture_model) + '_gridsearch.txt' 
 
 
     print('Training ' + str(architecture_model) + ' architecture:')
 
-    with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-        print(str(architecture_model) + ' architecture', file=output_file)
+    with open(output_file, 'a') as file:
+        print(str(architecture_model) + ' architecture', file=file)
 
-    training_hyperparams_grid = training_hyperparams
+    training_hypers_grid = training_hypers
     grid_keys = list(grid_search_hypers.keys())
     grid_values = list(grid_search_hypers.values())
     combinations = product(*grid_values)
 
-    with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-        print(*grid_keys, sep='\t', file=output_file)
+    with open(output_file, 'a') as file:
+        print(*grid_keys, sep='\t', file=file)
 
     for combo in combinations:
 
@@ -114,7 +109,7 @@ if __name__ == '__main__':
         print(grid_combination)
         
         for key in grid_keys:
-            training_hyperparams_grid[key] = grid_combination[key]
+            training_hypers_grid[key] = grid_combination[key]
 
         for i in range(samples):
             print('Sample: ', i)
@@ -130,7 +125,7 @@ if __name__ == '__main__':
                         network=classifier, 
                         trainset=trainset, 
                         testset=testset, 
-                        training_hyperparams=training_hyperparams_grid, 
+                        training_hypers=training_hypers_grid, 
                         model=architecture_model, 
                         verbose=verbose).fit(patience=grid_search_patience)
                 )
@@ -138,6 +133,5 @@ if __name__ == '__main__':
         accuracy_test_convergence = [res_dict['accuracy_test'][-grid_search_patience-1] for res_dict in results_sample]
         output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
 
-        with open(path_metrics_dir + '/output.txt', 'a') as output_file:
-            print(*output_line, sep='\t', file=output_file)
-
+        with open(output_file, 'a') as file:
+            print(*output_line, sep='\t', file=file)
