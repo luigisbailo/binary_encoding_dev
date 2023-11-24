@@ -2,7 +2,8 @@ dataset:
   name: MNIST
 
 architecture:
-  backbone: MLPvanilla
+  backbone: VGG
+  
   hypers:
     backbone_dense_nodes: [2048]
     pen_nodes: 64

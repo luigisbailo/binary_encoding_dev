@@ -64,7 +64,6 @@ if __name__ == '__main__':
     configs =  parse_config(config_file)
 
     architecture = configs['architecture']
-    architecture_backbone = configs['architecture']['backbone']
     training_hypers = configs['training']['hypers']
     grid_search_hypers = configs['grid_search']['hypers']
     grid_search_patience = configs['grid_search']['patience']
@@ -113,7 +112,7 @@ if __name__ == '__main__':
 
         for i in range(samples):
             print('Sample: ', i)
-            classifier = getattr(networks, architecture_backbone)(
+            classifier = getattr(networks, architecture['backbone'])(
                 model=architecture_model,
                 architecture=architecture,
                 )

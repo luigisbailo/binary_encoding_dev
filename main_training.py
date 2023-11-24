@@ -64,8 +64,6 @@ if __name__ == '__main__':
     etf_simplex_metrics = args.etf_metrics
 
     configs =  parse_config(config_file)
-    configs_architecture = configs['architecture']
-    architecture_backbone = configs['architecture']['backbone']
     architecture = configs['architecture']
     training_hypers = configs['training']['hypers']
     name_dataset = configs['dataset']['name']    
@@ -94,7 +92,7 @@ if __name__ == '__main__':
     res_dict= {}
     results_sample = []
     
-    classifier = getattr(networks, architecture_backbone)(
+    classifier = getattr(networks, architecture['backbone'])(
         model=architecture_model,
         architecture=architecture,
         )

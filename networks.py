@@ -1,17 +1,21 @@
 import torch
 import torch.nn as nn
 import importlib
+from typing import cast
 
 class Classifier(nn.Module):
 
-    def __init__ (self, model, architecture, dropout=0.5):
+    def __init__ (self, model, architecture):
     
         super(Classifier, self).__init__()
 
         torch_module= importlib.import_module("torch.nn")
 
+        self.architecture = architecture
+        self.architecture_hypers = architecture['hypers']
         self.backbone_dense_nodes= architecture['hypers']['backbone_dense_nodes']
         self.activation= architecture['hypers']['activation']
+        self.dropout = architecture['hypers']['dropout']
         pen_nodes = architecture['hypers']['pen_nodes']
 
         if model == 'bin_enc' or model == 'lin_pen':
@@ -26,7 +30,7 @@ class Classifier(nn.Module):
 
         self.in_channels = 1
         self.num_classes = 10
-        self.dropout = dropout
+
         self.activation = getattr(torch_module, self.activation)
 
     def make_backbone_dense_layers (self, input_dims):
@@ -37,13 +41,15 @@ class Classifier(nn.Module):
         for i in range(len(l_nodes)-1):
             l_layers.append(nn.Linear(l_nodes[i],l_nodes[i+1]))
             l_layers.append(self.activation())
-            if (i<len(l_nodes)-2):
+            if self.dropout:
                 l_layers.append(nn.Dropout(p=self.dropout))
+            if self.architecture_hypers['dense_bn']:
+                l_layers.append(nn.BatchNorm1d(l_nodes[i+1]))
 
         self.backbone_dense_layers = nn.Sequential(*l_layers)
 
 
-    def get_penultimate (self, input_dims):
+    def make_penultimate (self, input_dims):
 
         if self.pen_lin_nodes:
             pen_layer = nn.Linear(in_features=input_dims, out_features=self.pen_lin_nodes)
@@ -84,12 +90,12 @@ class Classifier(nn.Module):
 
 class MLPvanilla (Classifier):
    
-    def __init__ (self,  model, architecture, dropout=0.5):
+    def __init__ (self,  model, architecture):
          
-        super().__init__( model, architecture,  dropout)
+        super().__init__( model, architecture)
         
         self.make_backbone_dense_layers (input_dims=784)
-        self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+        self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         
     def forward(self, x):
         
@@ -101,9 +107,9 @@ class MLPvanilla (Classifier):
 
 class MLPconvs(Classifier):
 
-    def __init__ (self,  model, architecture,  dropout=0.5):
+    def __init__ (self,  model, architecture):
 
-        super().__init__( model, architecture,  dropout)
+        super().__init__( model, architecture)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
@@ -122,10 +128,10 @@ class MLPconvs(Classifier):
         )
         if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*3*3)
-            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+            self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
     
         else:
-            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*3*3)
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=512*3*3)
             
         
     def forward(self, x):
@@ -136,56 +142,47 @@ class MLPconvs(Classifier):
         return self.from_conv_forward(x)
 
 
-class VGG11(Classifier):
+VGG_cfgs = {
+    '11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    '13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    '16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    '19': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+}
 
-    def __init__ (self, model, architecture, dropout=0.5):
 
-        super().__init__( model, architecture,  dropout)
+class VGG(Classifier):
 
-        self.backbone_conv_layers = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            self.activation(),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            self.activation(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            self.activation(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            self.activation(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            self.activation(),
-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            self.activation(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            self.activation(),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            self.activation(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            self.activation(),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            self.activation(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
+    def __init__ (self, model, architecture):
 
+        super().__init__( model, architecture)
+
+        self.make_backbone_conv_layers()
         if self.backbone_dense_nodes:
             self.make_backbone_dense_layers (input_dims=512*1*1)
-            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+            self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         else:
-            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
-            
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=512*1*1)
+        
+    def make_backbone_conv_layers(self):
+    
+        cfg = VGG_cfgs[str(self.architecture['backbone_model'])]
+        # in_channels = self.in_channels
+        in_channels = 3
+        l_layers = nn.ModuleList ()
+        for v in cfg:
+            if v == 'M':
+                l_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            else:
+                v = cast(int, v)
+                conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+                l_layers.append(conv2d)
+                if self.architecture_hypers['conv_bn']:
+                    l_layers.append(nn.BatchNorm2d(v))
+                    l_layers.append(self.activation())
+                in_channels = v
+
+        self.backbone_conv_layers =  nn.Sequential(*l_layers)
+  
         
     def forward(self, x):
 
@@ -197,9 +194,9 @@ class VGG11(Classifier):
 
 class VGG13(Classifier):
 
-    def __init__ (self,  model, architecture, dropout=0.5):
+    def __init__ (self,  model, architecture):
 
-        super().__init__( model, architecture, dropout)
+        super().__init__( model, architecture)
 
         self.backbone_conv_layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
@@ -243,10 +240,10 @@ class VGG13(Classifier):
         if self.backbone_dense_nodes:
         
             self.make_backbone_dense_layers (input_dims=512*1*1)
-            self.pen_layer, self.output_layer = self.get_penultimate(self.backbone_dense_nodes[-1])
+            self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
     
         else:
-            self.pen_layer, self.output_layer = self.get_penultimate(input_dims=512*1*1)
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=512*1*1)
             
         
     def forward(self, x):

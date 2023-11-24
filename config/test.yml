@@ -2,9 +2,13 @@ dataset:
   name: MNIST
 
 architecture:
-  backbone: MLPvanilla
+  backbone: VGG13
+  backbone_model: 13
   hypers:
     backbone_dense_nodes: [2048]
+    dropout: 0.5
+    dense_bn: False
+    conv_bn: True
     pen_nodes: 64
     activation: ReLU
 
