@@ -129,7 +129,11 @@ if __name__ == '__main__':
                         verbose=verbose).fit(patience=grid_search_patience)
                 )
         
-        accuracy_test_convergence = [res_dict['accuracy_test'][-grid_search_patience-1] for res_dict in results_sample]
+        try:
+            accuracy_test_convergence = [res_dict['accuracy_test'][-grid_search_patience-1] for res_dict in results_sample]
+        except:
+            accuracy_test_convergence = [res_dict['accuracy_test'][-1] for res_dict in results_sample]
+
         output_line = list(grid_combination.values()) + [np.mean(accuracy_test_convergence)] + [np.std(accuracy_test_convergence)]
 
         with open(output_file, 'a') as file:

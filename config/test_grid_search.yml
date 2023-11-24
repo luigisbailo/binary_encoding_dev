@@ -2,10 +2,13 @@ dataset:
   name: MNIST
 
 architecture:
-  backbone: VGG
+  backbone: MLPvanilla
   
   hypers:
-    backbone_dense_nodes: [2048]
+    backbone_dense_nodes: [2048, 2048]
+    dropout: 0.5
+    dense_bn: False
+    conv_bn: True
     pen_nodes: 64
     activation: ReLU
 
@@ -20,10 +23,11 @@ training:
     logging: 1
     step_scheduler: 5
     samples: 1
-    optimizer: SGD
+    optimizer: Adam
 
 grid_search:
   patience: 5
   hypers:
     lr: [0.001, 0.01]
     loss_pen_factor: [1, 10]
+    gamma: [0.99,0.9]

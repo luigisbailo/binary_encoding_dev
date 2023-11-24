@@ -1,9 +1,9 @@
 dataset:
-  name: MNIST
+  name: CIFAR10
 
 architecture:
   backbone: VGG13
-  backbone_model: 13
+  backbone_model: 11
   hypers:
     backbone_dense_nodes: [2048]
     dropout: 0.5
@@ -22,7 +22,5 @@ training:
     logging_pen: 0
     logging: 1
     step_scheduler: 5
+    gamma: 0.9
     optimizer: SGD
-
-grid_search:
-  lr: [0.001, 0.005, 0.01]
