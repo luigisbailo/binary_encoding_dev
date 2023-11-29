@@ -26,6 +26,17 @@ def parse_config(config_file):
         print(f"Error parsing config file: {e}")
         sys.exit(1)
 
+def convert_bool(dict):
+
+    for key in dict.keys():
+
+        if dict[key] == 'True' or dict[key] == 'true':
+            dict[key] = True
+        elif dict[key] == 'False' or dict[key] == 'false':
+            dict[key] = False
+
+    return dict
+
 def compute_mean_std(dataset):
 
     loader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=False)
@@ -82,9 +93,11 @@ if __name__ == '__main__':
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform_normalized)
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform_normalized)
 
+    in_channels = trainset[0][0].shape[0]  
+    num_classes = len(set(trainset.classes))
+
     path_metrics_dir = str(results_dir)
     output_file = path_metrics_dir + '/' + str(architecture_model) + '_gridsearch.txt' 
-
 
     print('Training ' + str(architecture_model) + ' architecture:')
 
@@ -92,6 +105,7 @@ if __name__ == '__main__':
         print(str(architecture_model) + ' architecture', file=file)
 
     training_hypers_grid = training_hypers
+    architecture_grid = architecture
     grid_keys = list(grid_search_hypers.keys())
     grid_values = list(grid_search_hypers.values())
     combinations = product(*grid_values)
@@ -105,16 +119,30 @@ if __name__ == '__main__':
         results_sample = []
         
         grid_combination = dict(zip(grid_keys, combo))
-        print(grid_combination)
-        
+
         for key in grid_keys:
-            training_hypers_grid[key] = grid_combination[key]
+            try:
+                training_hypers_grid[key] = grid_combination[key]
+            except:
+                try:
+                    architecture_grid['hypers'][key] = grid_combination[key]                
+                except:
+                    print('Error: hyperparameter not recognized')
+        
+        training_hypers_grid = convert_bool(training_hypers_grid)
+        architecture_grid['hypers'] = convert_bool(architecture_grid['hypers'])
+
+        print('Grid combination: ', grid_combination)
+        print('Training hypers: ', training_hypers_grid)
+        print('Architectures hypers: ', architecture_grid['hypers'])
 
         for i in range(samples):
             print('Sample: ', i)
             classifier = getattr(networks, architecture['backbone'])(
                 model=architecture_model,
-                architecture=architecture,
+                architecture=architecture_grid,
+                in_channels=in_channels,
+                num_classes=num_classes
                 )
             if torch.cuda.is_available():
                 classifier = torch.nn.DataParallel(classifier)
@@ -126,6 +154,7 @@ if __name__ == '__main__':
                         testset=testset, 
                         training_hypers=training_hypers_grid, 
                         model=architecture_model, 
+                        etfsimplex_metrics=False,
                         verbose=verbose).fit(patience=grid_search_patience)
                 )
         

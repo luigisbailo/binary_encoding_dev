@@ -19,15 +19,6 @@ class Trainer ():
         self.verbose = verbose
         
         self.training_hypers = training_hypers
-        # self.optimizer = training_hypers['optimizer']
-        # self.batch_size = training_hypers['batch_size']
-        # self.epochs = training_hypers['epochs']
-        # self.step_scheduler = training_hypers['step_scheduler']
-        # self.lr = training_hypers['lr']
-        # self.loss_pen_factor = training_hypers['loss_pen_factor']
-        # self.loss_pen_funct = training_hypers['loss_pen_funct']
-        # self.logging_pen = training_hypers['logging_pen']
-        # self.logging = training_hypers['logging']
 
         if model == 'bin_enc':
             self.binenc_loss = True
@@ -42,8 +33,13 @@ class Trainer ():
 
         if (self.training_hypers['optimizer'] == 'SGD'):
             opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], momentum=0.9, weight_decay=0.0005)
-        else:
+        elif (self.training_hypers['optimizer'] == 'Adam'):
             opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+        elif (self.training_hypers['optimizer'] == 'AdamW'):
+            opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+        else:
+            print('Error: Optimizer not recognized')
+            sys.exit(1)
 
         if self.training_hypers['step_scheduler']:
             scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=self.training_hypers['step_scheduler'], gamma=self.training_hypers['gamma'])
@@ -83,6 +79,7 @@ class Trainer ():
                 save_pen = False
                 if self.training_hypers['logging_pen']>0 and epoch%self.training_hypers['logging_pen']==0:
                     save_pen = True
+
 
                 res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=self.etfsimplex_metrics)
 

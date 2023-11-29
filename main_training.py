@@ -25,6 +25,17 @@ def parse_config(config_file):
         print(f"Error parsing config file: {e}")
         sys.exit(1)
 
+def convert_bool(dict):
+
+    for key in dict.keys():
+
+        if dict[key] == 'True' or dict[key] == 'true':
+            dict[key] = True
+        elif dict[key] == 'False' or dict[key] == 'false':
+            dict[key] = False
+
+    return dict
+
 def compute_mean_std(dataset):
 
     loader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=False)
@@ -71,12 +82,15 @@ if __name__ == '__main__':
         training_hypers['lr'] = float(lr)
     if not etf_simplex_metrics:
         etf_simplex_metrics=False
+    elif etf_simplex_metrics == 'True' or etf_simplex_metrics == 'true':
+        etf_simplex_metrics=True
+    elif etf_simplex_metrics == 'False' or etf_simplex_metrics == 'false':
+        etf_simplex_metrics=False
 
     torch_module= importlib.import_module("torchvision.datasets")
     torch_dataset = getattr(torch_module, name_dataset)
     transform = transforms.Compose([transforms.ToTensor()])
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
-    testset = torch_dataset ("./dataset", train=False, download=True, transform=transform)
     trainset_mean, trainset_std = compute_mean_std(trainset)
     transform_normalized = transforms.Compose([
         transforms.ToTensor(),
@@ -85,30 +99,35 @@ if __name__ == '__main__':
     trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform_normalized)
     testset = torch_dataset ("./dataset", train=False, download=True, transform=transform_normalized)
 
+    in_channels = trainset[0][0].shape[0]  
+    num_classes = len(set(trainset.classes))
 
     path_metrics_dir = str(results_dir)
 
     print('Training ' + str(architecture_model) + ' architecture:')
-    res_dict= {}
-    results_sample = []
     
+    training_hypers = convert_bool(training_hypers)
+    architecture['hypers'] = convert_bool(architecture['hypers'])
+
     classifier = getattr(networks, architecture['backbone'])(
         model=architecture_model,
         architecture=architecture,
+        in_channels=in_channels,
+        num_classes=num_classes
         )
     if torch.cuda.is_available():
         classifier = torch.nn.DataParallel(classifier)
         classifier = classifier.to(device)
-    results_sample.append(
-        Trainer(device=device, 
-                network=classifier, 
-                trainset=trainset, 
-                testset=testset, 
-                training_hypers=training_hypers, 
-                model=architecture_model, 
-                etfsimplex_metrics=etf_simplex_metrics,
-                verbose=verbose).fit()
-        )
+    
+    res = Trainer(device=device, 
+            network=classifier, 
+            trainset=trainset, 
+            testset=testset, 
+            training_hypers=training_hypers, 
+            model=architecture_model, 
+            etfsimplex_metrics=etf_simplex_metrics,
+            verbose=verbose).fit()
+        
 
     if sample:    
         file_name = '/res_' + architecture_model + '_' + sample + '.pkl'
@@ -116,5 +135,5 @@ if __name__ == '__main__':
         file_name = '/res_' + architecture_model + '.pkl'
 
     with open (path_metrics_dir + file_name, 'wb') as file:
-        pickle.dump(res_dict, file)
+        pickle.dump(res, file)
 
