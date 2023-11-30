@@ -61,6 +61,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
     parser.add_argument('--results-dir', required=True)
+    parser.add_argument('--dataset-dir', required=True)
     parser.add_argument('--model', required=True)
     parser.add_argument('--sample', required=False)
     parser.add_argument('--lr', required=False)
@@ -69,6 +70,7 @@ if __name__ == '__main__':
 
     config_file = args.config
     results_dir = args.results_dir
+    dataset_dir = args.dataset_dir
     architecture_model = args.model
     sample = args.sample
     lr = args.lr
@@ -90,14 +92,14 @@ if __name__ == '__main__':
     torch_module= importlib.import_module("torchvision.datasets")
     torch_dataset = getattr(torch_module, name_dataset)
     transform = transforms.Compose([transforms.ToTensor()])
-    trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform)
+    trainset = torch_dataset (str(dataset_dir), train=True, download=True, transform=transform)
     trainset_mean, trainset_std = compute_mean_std(trainset)
     transform_normalized = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(trainset_mean, trainset_std)
     ])
-    trainset = torch_dataset ("./dataset", train=True, download=True, transform=transform_normalized)
-    testset = torch_dataset ("./dataset", train=False, download=True, transform=transform_normalized)
+    trainset = torch_dataset (str(dataset_dir), train=True, download=True, transform=transform_normalized)
+    testset = torch_dataset (str(dataset_dir), train=False, download=True, transform=transform_normalized)
 
     in_channels = trainset[0][0].shape[0]  
     num_classes = len(set(trainset.classes))
