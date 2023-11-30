@@ -33,7 +33,7 @@ class Classifier(nn.Module):
 
         self.activation = getattr(torch_module, self.activation)
 
-    def make_backbone_dense_layers (self, input_dims):
+    def make_dense_classifier (self, input_dims):
 
         l_layers = nn.ModuleList ()
         l_nodes = [input_dims] + self.backbone_dense_nodes
@@ -47,7 +47,7 @@ class Classifier(nn.Module):
                 l_layers.append(nn.Dropout(p=self.dropout))
 
 
-        self.backbone_dense_layers = nn.Sequential(*l_layers)
+        self.dense_classifier = nn.Sequential(*l_layers)
 
 
     def make_penultimate (self, input_dims):
@@ -68,10 +68,10 @@ class Classifier(nn.Module):
         return pen_layer, output_layer
 
 
-    def from_conv_forward (self, x):
+    def classifier_forward (self, x):
         
         if self.backbone_dense_nodes:
-            x = self.backbone_dense_layers(x)
+            x = self.dense_classifier(x)
 
         if self.pen_lin_nodes:
             x_pen = self.pen_layer(x)
@@ -95,14 +95,14 @@ class MLPvanilla (Classifier):
          
         super().__init__( model, architecture, in_channels, num_classes)
         
-        self.make_backbone_dense_layers (input_dims=784)
+        self.make_dense_classifier (input_dims=784)
         self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         
     def forward(self, x):
         
         x = torch.flatten(x, start_dim=1)
 
-        return self.from_conv_forward(x)
+        return self.classifier_forward(x)
 
 
 
@@ -112,7 +112,7 @@ class MLPconvs(Classifier):
 
         super().__init__( model, architecture, in_channels, num_classes)
 
-        self.backbone_conv_layers = nn.Sequential(
+        self.backbone_layers = nn.Sequential(
             nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
             self.activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
@@ -128,7 +128,7 @@ class MLPconvs(Classifier):
             self.activation(),
         )
         if self.backbone_dense_nodes:
-            self.make_backbone_dense_layers (input_dims=512*3*3)
+            self.make_dense_classifier (input_dims=512*3*3)
             self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
     
         else:
@@ -140,7 +140,7 @@ class MLPconvs(Classifier):
         x = self.backbone_dense_nodes(x)    
         x = torch.flatten(x, start_dim=1)
 
-        return self.from_conv_forward(x)
+        return self.classifier_forward(x)
 
 
 VGG_cfgs = {
@@ -157,14 +157,14 @@ class VGG(Classifier):
 
         super().__init__( model, architecture, in_channels, num_classes)
 
-        self.make_backbone_conv_layers()
+        self.make_backbone_layers()
         if self.backbone_dense_nodes:
-            self.make_backbone_dense_layers (input_dims=512*1*1)
+            self.make_dense_classifier (input_dims=512*1*1)
             self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         else:
             self.pen_layer, self.output_layer = self.make_penultimate(input_dims=512*1*1)
         
-    def make_backbone_conv_layers(self):
+    def make_backbone_layers(self):
     
         cfg = VGG_cfgs[str(self.architecture['backbone_model'])]
         in_channels = self.in_channels
@@ -181,13 +181,113 @@ class VGG(Classifier):
                 l_layers.append(self.activation())
                 in_channels = v
 
-        self.backbone_conv_layers =  nn.Sequential(*l_layers)
+        self.backbone_layers =  nn.Sequential(*l_layers)
   
         
     def forward(self, x):
 
-        x = self.backbone_conv_layers(x)    
+        x = self.backbone_layers(x)    
         x = torch.flatten(x, start_dim=1)
 
-        return self.from_conv_forward(x)
+        return self.classifier_forward(x)
+
+
+
+
+# 3x3 convolution
+def conv3x3(in_channels, out_channels, stride=1):
+
+    return nn.Conv2d(in_channels, out_channels, kernel_size=3, 
+                        stride=stride, padding=1, bias=False)
+
+
+# Residual block
+class ResidualBlock(nn.Module):
+
+    def __init__(self, in_channels, out_channels, activation, stride=1, downsample=None):
+        super(ResidualBlock, self).__init__()
+        
+        self.conv1 = conv3x3(in_channels, out_channels, stride)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.activation = activation(inplace=True)
+        self.conv2 = conv3x3(out_channels, out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.downsample = downsample
+
+    
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.activation(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        if self.downsample:
+            residual = self.downsample(x)
+        out += residual
+        out = self.activation(out)
+        return out
+
+
+# ResNet
+class ResNet18(Classifier):
+
+    def __init__ (self, model, architecture, in_channels, num_classes):
+
+        super().__init__( model, architecture, in_channels, num_classes)
+
+        layers = [2,2,2]
+        self.make_backbone_layers(ResidualBlock, layers)
+        if self.backbone_dense_nodes:
+            self.make_dense_classifier (input_dims=64)
+            self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
+        else:
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=64)
+
+
+    def make_layer(self, block, out_channels, blocks, stride=1):
+        downsample = None
+        if (stride != 1) or (self.in_channels != out_channels):
+            downsample = nn.Sequential(
+                conv3x3(self.in_channels, out_channels, stride=stride),
+                nn.BatchNorm2d(out_channels))
+        layers = []
+        layers.append(block(self.in_channels, out_channels, self.activation, stride, downsample))
+        self.in_channels = out_channels
+        for i in range(1, blocks):
+            layers.append(block(out_channels, out_channels, self.activation,))
+        return nn.Sequential(*layers)
+
+
+    def make_backbone_layers(self, block, layers):
+            
+        self.in_channels = 16
+        self.conv = conv3x3(3, 16)
+        self.bn = nn.BatchNorm2d(16)
+        # self.relu = nn.ReLU(inplace=True)
+        self.layer1 = self.make_layer(block, 16, layers[0])
+        self.layer2 = self.make_layer(block, 32, layers[1], 2)
+        self.layer3 = self.make_layer(block, 64, layers[2], 2)
+        self.avg_pool = nn.AvgPool2d(8)
+        # self.fc = nn.Linear(64, num_classes)
+        
+        l_layers = nn.ModuleList ()
+        l_layers.append(self.conv)
+        l_layers.append(self.bn)
+        l_layers.append(self.activation())
+        l_layers.append(self.layer1)
+        l_layers.append(self.layer2)
+        l_layers.append(self.layer3)
+        l_layers.append(self.avg_pool)
+
+        self.backbone_layers =  nn.Sequential(*l_layers)
+
+    def forward(self, x):
+
+        x = self.backbone_layers(x)    
+        x = torch.flatten(x, start_dim=1)
+
+        return self.classifier_forward(x)
+
+    
 
