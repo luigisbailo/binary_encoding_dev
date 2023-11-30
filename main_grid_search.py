@@ -121,13 +121,12 @@ if __name__ == '__main__':
         grid_combination = dict(zip(grid_keys, combo))
 
         for key in grid_keys:
-            try:
+            if key in training_hypers_grid.keys():
                 training_hypers_grid[key] = grid_combination[key]
-            except:
-                try:
-                    architecture_grid['hypers'][key] = grid_combination[key]                
-                except:
-                    print('Error: hyperparameter not recognized')
+            elif key in architecture_grid['hypers'].keys():
+                architecture_grid['hypers'][key] = grid_combination[key]                
+            else:
+                print('Error: hyperparameter not recognized')
         
         training_hypers_grid = convert_bool(training_hypers_grid)
         architecture_grid['hypers'] = convert_bool(architecture_grid['hypers'])
