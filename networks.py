@@ -230,19 +230,20 @@ class ResidualBlock(nn.Module):
 
 
 # ResNet
-class ResNet18(Classifier):
+class ResNet(Classifier):
 
     def __init__ (self, model, architecture, in_channels, num_classes):
 
         super().__init__( model, architecture, in_channels, num_classes)
 
-        layers = [2,2,2]
+        layers = [3, 4, 6, 3]
         self.make_backbone_layers(ResidualBlock, layers)
+        
         if self.backbone_dense_nodes:
-            self.make_dense_classifier (input_dims=64)
+            self.make_dense_classifier (input_dims=1024)
             self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         else:
-            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=64)
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=1024)
 
 
     def make_layer(self, block, out_channels, blocks, stride=1):
@@ -261,14 +262,15 @@ class ResNet18(Classifier):
 
     def make_backbone_layers(self, block, layers):
             
-        self.in_channels = 16
-        self.conv = conv3x3(3, 16)
-        self.bn = nn.BatchNorm2d(16)
+        self.in_channels = 64
+        self.conv = conv3x3(3, 64)
+        self.bn = nn.BatchNorm2d(64)
         # self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self.make_layer(block, 16, layers[0])
-        self.layer2 = self.make_layer(block, 32, layers[1], 2)
-        self.layer3 = self.make_layer(block, 64, layers[2], 2)
-        self.avg_pool = nn.AvgPool2d(8)
+        self.layer1 = self.make_layer(block, 64, layers[0])
+        self.layer2 = self.make_layer(block, 128, layers[1], 2)
+        self.layer3 = self.make_layer(block, 256, layers[2], 2)
+        self.layer4 = self.make_layer(block, 512, layers[3], 2)
+        self.avg_pool = nn.AvgPool2d(7, 1)
         # self.fc = nn.Linear(64, num_classes)
         
         l_layers = nn.ModuleList ()
