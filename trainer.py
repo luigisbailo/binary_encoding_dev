@@ -32,11 +32,17 @@ class Trainer ():
         torch_module= importlib.import_module("torch.optim")
 
         if (self.training_hypers['optimizer'] == 'SGD'):
-            opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], momentum=0.9, weight_decay=0.0005)
+            opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], momentum=0.9, weight_decay=0.0001)
         elif (self.training_hypers['optimizer'] == 'Adam'):
-            opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+            if self.training_hypers['amsgrad']:
+                opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+            else: 
+                opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=False)
         elif (self.training_hypers['optimizer'] == 'AdamW'):
-            opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+            if self.training_hypers['amsgrad']:
+                opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=True)
+            else:
+                opt = getattr(torch_module, self.training_hypers['optimizer'])(self.network.parameters(), lr=self.training_hypers['lr'], amsgrad=False)                
         else:
             print('Error: Optimizer not recognized')
             sys.exit(1)
@@ -51,6 +57,7 @@ class Trainer ():
         best_accuracy_test = 0
         counter = 0
 
+        loss_pen_factor = self.training_hypers['loss_pen_factor']
         for epoch in range (self.training_hypers['epochs']):
             for x,y in trainloader:
                 x=x.to(self.device)
@@ -68,11 +75,12 @@ class Trainer ():
                     else:
                         print("Error: penultimate loss not available")
                         sys.exit(1)
-                    loss = loss + self.training_hypers['loss_pen_factor']*loss_pen
+                    loss = loss + loss_pen*loss_pen_factor
                     
                 loss.backward()
                 opt.step()
-            
+            loss_pen_factor = loss_pen_factor * self.training_hypers['loss_pen_factor_gamma']
+                
             if epoch%self.training_hypers['logging']==0 and epoch!=0:
                 if self.verbose:
                     print('Epoch: ', epoch)
