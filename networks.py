@@ -200,63 +200,109 @@ def conv3x3(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels, out_channels, kernel_size=3, 
                         stride=stride, padding=1, bias=False)
 
+def conv1x1(in_channels, out_channels):
 
-# Residual block
-class ResidualBlock(nn.Module):
+    return nn.Conv2d(in_channels, out_channels, kernel_size=1, 
+                        stride=1, padding=0, bias=False)
 
-    def __init__(self, in_channels, out_channels, activation, stride=1, downsample=None):
-        super(ResidualBlock, self).__init__()
+# class BasicBlock(nn.Module):
+
+#     def __init__(self, in_channels, out_channels, activation, stride=1, downsample=None):
+#         super(BasicBlock, self).__init__()
         
-        self.conv1 = conv3x3(in_channels, out_channels, stride)
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.activation = activation(inplace=True)
-        self.conv2 = conv3x3(out_channels, out_channels)
-        self.bn2 = nn.BatchNorm2d(out_channels)
-        self.downsample = downsample
+#         self.expansion = 1        
+#         self.conv1 = conv3x3(in_channels, out_channels, stride)
+#         self.bn1 = nn.BatchNorm2d(out_channels)
+#         self.activation = activation(inplace=True)
+#         self.conv2 = conv3x3(out_channels, out_channels)
+#         self.bn2 = nn.BatchNorm2d(out_channels)
+#         self.downsample = downsample
 
     
+#     def forward(self, x):
+#         residual = x
+#         out = self.conv1(x)
+#         out = self.bn1(out)
+#         out = self.activation(out)
+#         out = self.conv2(out)
+#         out = self.bn2(out)
+#         if self.downsample:
+#             residual = self.downsample(x)
+#         out += residual
+#         out = self.activation(out)
+        # return out
+
+
+class Bottleneck(nn.Module):
+    
+    def __init__(self, in_channels, out_channels, activation, downsample=None, stride=1):
+        super(Bottleneck, self).__init__()
+        
+        self.expansion = 4        
+        self.conv1 = conv1x1(in_channels, out_channels)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.activation = activation(inplace=True)
+        self.conv2 = conv3x3(out_channels, out_channels, stride)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        
+        self.conv3 = conv1x1(out_channels, self.expansion*out_channels)
+        self.bn3 = nn.BatchNorm2d(self.expansion*out_channels)
+        self.downsample = downsample
+        self.stride = stride
+        
     def forward(self, x):
-        residual = x
+        identity = x
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.activation(out)
         out = self.conv2(out)
         out = self.bn2(out)
-        if self.downsample:
-            residual = self.downsample(x)
-        out += residual
+        out = self.activation(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+        if self.downsample is not None:
+            identity = self.downsample(x)
+            
+        out += identity
         out = self.activation(out)
         return out
 
-
+    
 # ResNet
-class ResNet(Classifier):
+class ResNet50(Classifier):
 
     def __init__ (self, model, architecture, in_channels, num_classes):
 
         super().__init__( model, architecture, in_channels, num_classes)
+        
+        self.expansion = 4
+        self.in_channels = 64
 
         layers = [3, 4, 6, 3]
-        self.make_backbone_layers(ResidualBlock, layers)
+        self.make_backbone_layers(Bottleneck, layers)
         
         if self.backbone_dense_nodes:
-            self.make_dense_classifier (input_dims=1024)
+            self.make_dense_classifier (input_dims=512*self.expansion)
             self.pen_layer, self.output_layer = self.make_penultimate(self.backbone_dense_nodes[-1])
         else:
-            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=1024)
+            self.pen_layer, self.output_layer = self.make_penultimate(input_dims=512*self.expansion)
 
 
     def make_layer(self, block, out_channels, blocks, stride=1):
         downsample = None
-        if (stride != 1) or (self.in_channels != out_channels):
-            downsample = nn.Sequential(
-                conv3x3(self.in_channels, out_channels, stride=stride),
-                nn.BatchNorm2d(out_channels))
         layers = []
-        layers.append(block(self.in_channels, out_channels, self.activation, stride, downsample))
-        self.in_channels = out_channels
+                
+        if stride != 1 or self.in_channels != out_channels*self.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.in_channels, out_channels*self.expansion, kernel_size=1, stride=stride),
+                nn.BatchNorm2d(out_channels*self.expansion)
+            )
+            
+        layers.append(block(self.in_channels, out_channels, self.activation, downsample=downsample, stride=stride))
+        self.in_channels = out_channels*self.expansion
+        
         for i in range(1, blocks):
-            layers.append(block(out_channels, out_channels, self.activation,))
+            layers.append(block(self.in_channels, out_channels, self.activation))
         return nn.Sequential(*layers)
 
 
@@ -265,21 +311,23 @@ class ResNet(Classifier):
         self.in_channels = 64
         self.conv = conv3x3(3, 64)
         self.bn = nn.BatchNorm2d(64)
-        # self.relu = nn.ReLU(inplace=True)
+        self.max_pool = nn.MaxPool2d(kernel_size = 3, stride=2, padding=1)
+
         self.layer1 = self.make_layer(block, 64, layers[0])
         self.layer2 = self.make_layer(block, 128, layers[1], 2)
         self.layer3 = self.make_layer(block, 256, layers[2], 2)
         self.layer4 = self.make_layer(block, 512, layers[3], 2)
-        self.avg_pool = nn.AvgPool2d(7, 1)
-        # self.fc = nn.Linear(64, num_classes)
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         
         l_layers = nn.ModuleList ()
         l_layers.append(self.conv)
         l_layers.append(self.bn)
         l_layers.append(self.activation())
+        # l_layers.append(self.max_pool)
         l_layers.append(self.layer1)
         l_layers.append(self.layer2)
         l_layers.append(self.layer3)
+        l_layers.append(self.layer4)
         l_layers.append(self.avg_pool)
 
         self.backbone_layers =  nn.Sequential(*l_layers)
