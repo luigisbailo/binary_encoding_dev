@@ -62,6 +62,7 @@ class Trainer ():
             for x,y in trainloader:
                 x=x.to(self.device)
                 y=y.to(self.device)
+                
                 opt.zero_grad()
                 y_pred, pen_layer= self.network(x)
     
@@ -76,18 +77,17 @@ class Trainer ():
                         print("Error: penultimate loss not available")
                         sys.exit(1)
                     loss = loss + loss_pen*loss_pen_factor
-                    
                 loss.backward()
                 opt.step()
+
             loss_pen_factor = loss_pen_factor * self.training_hypers['loss_pen_factor_gamma']
-                
+            
             if epoch%self.training_hypers['logging']==0 and epoch!=0:
                 if self.verbose:
                     print('Epoch: ', epoch)
                 save_pen = False
                 if self.training_hypers['logging_pen']>0 and epoch%self.training_hypers['logging_pen']==0:
                     save_pen = True
-
 
                 res_epoch = self.get_metrics(save_pen, etfsimplex_metrics=self.etfsimplex_metrics)
 
@@ -115,7 +115,7 @@ class Trainer ():
         self.network.eval()
         with torch.no_grad():
 
-            loader = torch.utils.data.DataLoader (self.trainset, batch_size=10000)
+            loader = torch.utils.data.DataLoader (self.trainset, batch_size=2000)
             y_pred_set = []
             y_set = []
             pen_layer_set = []
@@ -129,17 +129,14 @@ class Trainer ():
             y_pred_set = torch.cat(y_pred_set)
             y_set = torch.cat(y_set)
             pen_layer_set = torch.cat(pen_layer_set)
-
             loss_train = nn.CrossEntropyLoss(reduction='mean')(y_pred_set, y_set).detach().cpu().numpy()
             accuracy_train = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()        
             res['loss_train']=loss_train
             res['accuracy_train'] = accuracy_train
-
             if save_pen:
                 res['pen']=pen_layer_set.cpu().numpy()
     
             if etfsimplex_metrics:
-
                 mean_class_cent = []
                 sigma_w = []
                 sigma_b_class = []
@@ -212,7 +209,7 @@ class Trainer ():
 
                 purity = np.mean(purity) 
                 res ['purity'] = purity
-
+            
             if get_encoding:  
 
                 encoding = -1*np.ones([len(np.unique(y.cpu())), pen_layer_set.shape[1]])       
@@ -228,7 +225,7 @@ class Trainer ():
 
                 res['encoding'] = encoding
 
-            loader = torch.utils.data.DataLoader (self.testset, batch_size=10000)
+            loader = torch.utils.data.DataLoader (self.testset, batch_size=2000)
             y_pred_set = []
             y_set = []
             for x,y in loader:
@@ -242,7 +239,7 @@ class Trainer ():
 
             accuracy_test = (torch.argmax(y_pred_set, dim=1)==y_set).float().mean().cpu().numpy()
             res['accuracy_test'] = accuracy_test
-
+            
             if self.model == 'bin_enc' or self.model == 'lin_pen':
                 if etfsimplex_metrics:
                     print(np.around(accuracy_train,5), np.around(accuracy_test,5), np.around(purity, 6), '---',
