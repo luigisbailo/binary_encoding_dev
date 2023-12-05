@@ -32,7 +32,12 @@ class Classifier(nn.Module):
         self.num_classes = num_classes
 
         self.activation = getattr(torch_module, self.activation)
-
+    
+    def reset_parameters(self):
+        for layer in self.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+    
     def make_dense_classifier (self, input_dims):
 
         l_layers = nn.ModuleList ()
