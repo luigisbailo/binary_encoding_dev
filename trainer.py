@@ -48,55 +48,6 @@ class Trainer ():
         if self.training_hypers['step_scheduler']:
             self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=self.training_hypers['step_scheduler'], gamma=self.training_hypers['gamma'])
             
-
-
-    def find_lr (self, lrs, epochs=2, plot=False, verbose=False):
-        
-        trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.training_hypers['batch_size'], shuffle=True)
-        loss_values = []
-        
-        if verbose:
-            print(str("lrs"), str("loss"), sep='\t')
-            
-        for lr in lrs:
-            self.make_optimizer(lr=lr)
-            self.network.module.reset_parameters()
-            loss_pen_factor = self.training_hypers['loss_pen_factor']
-
-            for epoch in range (epochs):
-                for x,y in trainloader:
-                    x=x.to(self.device)
-                    y=y.to(self.device)
-
-                    self.opt.zero_grad()
-                    y_pred, pen_layer= self.network(x)
-
-                    loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
-                    loss = loss_class 
-                    if self.binenc_loss:
-                        if self.training_hypers['loss_pen_funct'] == 'exp_mse':
-                            loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean'))
-                        elif self.training_hypers['loss_pen_funct'] == 'mse':
-                            loss_pen = nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean')
-                        else:
-                            print("Error: penultimate loss not available")
-                            sys.exit(1)
-                        loss = loss + loss_pen*loss_pen_factor
-                    loss.backward()
-                    self.opt.step()
-
-                loss_pen_factor = loss_pen_factor * self.training_hypers['loss_pen_factor_gamma']
-            
-            loss_class = loss_class.detach().cpu().numpy()
-            if verbose:
-                print(lr, loss_class, sep='\t')
-            loss_values.append(loss_class)
-        
-        if plot:
-            plt.xscale('log')  
-            plt.plot(lrs, loss_values )
-        
-        return loss_values
         
     
     def fit (self, patience=None):
@@ -113,22 +64,25 @@ class Trainer ():
         
         self.make_optimizer(lr=self.training_hypers['lr'])
         loss_pen_factor = self.training_hypers['loss_pen_factor']
-        
-        for epoch in range (self.training_hypers['epochs']):
+        print(self.opt)
+        for epoch in range (1, self.training_hypers['epochs']+1):
+            self.network.train()
             for x,y in trainloader:
                 x=x.to(self.device)
                 y=y.to(self.device)
                 
-                self.opt.zero_grad()
                 y_pred, pen_layer= self.network(x)
-    
+                self.opt.zero_grad()
+
                 loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
                 loss = loss_class 
                 if self.binenc_loss:
-                    if self.training_hypers['loss_pen_funct'] == 'exp_mse':
+                    if self.training_hypers['loss_pen_funct'] == 'exp':
                         loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean'))
                     elif self.training_hypers['loss_pen_funct'] == 'mse':
                         loss_pen = nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean')
+                    elif self.training_hypers['loss_pen_funct'] == 'l1':
+                        loss_pen = nn.functional.l1_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean')
                     else:
                         print("Error: penultimate loss not available")
                         sys.exit(1)
@@ -138,7 +92,7 @@ class Trainer ():
 
             loss_pen_factor = loss_pen_factor * self.training_hypers['loss_pen_factor_gamma']
             
-            if epoch%self.training_hypers['logging']==0 and epoch!=0:
+            if epoch%self.training_hypers['logging']==0:
                 if self.verbose:
                     print('Epoch: ', epoch)
                 save_pen = False
@@ -171,7 +125,7 @@ class Trainer ():
         self.network.eval()
         with torch.no_grad():
 
-            loader = torch.utils.data.DataLoader (self.trainset, batch_size=2000)
+            loader = torch.utils.data.DataLoader (self.trainset, batch_size=1000)
             y_pred_set = []
             y_set = []
             pen_layer_set = []
@@ -201,10 +155,13 @@ class Trainer ():
                 for class_label in np.unique(y.cpu()):
                     sel = np.argmax(y_pred_set.cpu().numpy(),axis=1)==class_label
                     if (np.sum(sel)>0):
+                        
                         mean_class = np.mean(pen_layer_set.cpu().numpy()[sel], axis=0)
                         mean_class_cent.append(mean_class-global_mean)
-                        sigma_w_class = np.cov((pen_layer_set.cpu().numpy()[sel]-mean_class).T)
-
+                        try:
+                            sigma_w_class = np.cov((pen_layer_set.cpu().numpy()[sel]-mean_class).T)
+                        except:
+                            sigma_w_class = 0                            
                         sigma_w.append(sigma_w_class)
                         sigma_b_class.append((mean_class-global_mean))
                 sigma_w = np.mean(sigma_w, axis=0)
@@ -241,14 +198,17 @@ class Trainer ():
 
                 if self.model == 'bin_enc' or self.model == 'lin_pen':  
                     for d in range (pen_layer.shape[1]):
-                        gmm = GaussianMixture(n_components=2)
-                        gmm.fit(pen_layer_set[:,d].cpu().reshape(-1,1))
-                        score.append(gmm.score(pen_layer_set[:,d].cpu().reshape(-1,1)))
-                        means = gmm.means_.flatten()
-                        std = np.sqrt(gmm.covariances_).flatten()
-                        stds.append(std)
-                        peak_dist_train.append(np.abs(means[0]-means[1])/np.mean(std))
-
+                        try:
+                            gmm = GaussianMixture(n_components=2)
+                            gmm.fit(pen_layer_set[:,d].cpu().reshape(-1,1))
+                            score.append(gmm.score(pen_layer_set[:,d].cpu().reshape(-1,1)))
+                            means = gmm.means_.flatten()
+                            std = np.sqrt(gmm.covariances_).flatten()
+                            stds.append(std)
+                            peak_dist_train.append(np.abs(means[0]-means[1])/np.mean(std))
+                        except:
+                            pass                            
+                        
                     score = np.mean(score)
                     stds = np.mean(stds)
                     peak_dist_train = np.mean(peak_dist_train)
@@ -281,7 +241,7 @@ class Trainer ():
 
                 res['encoding'] = encoding
 
-            loader = torch.utils.data.DataLoader (self.testset, batch_size=2000)
+            loader = torch.utils.data.DataLoader (self.testset, batch_size=1000)
             y_pred_set = []
             y_set = []
             for x,y in loader:
@@ -312,6 +272,54 @@ class Trainer ():
                 else:
                     print( np.around(accuracy_train,5), np.around(accuracy_test,5) )
 
-
-        
         return res
+    
+    
+    
+    def find_lr (self, lrs, epochs=2, plot=False, verbose=False):
+        
+        trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.training_hypers['batch_size'], shuffle=True)
+        loss_values = []
+        
+        if verbose:
+            print(str("lrs"), str("loss"), sep='\t')
+            
+        for lr in lrs:
+            self.make_optimizer(lr=lr)
+            self.network.module.reset_parameters()
+            loss_pen_factor = self.training_hypers['loss_pen_factor']
+
+            for epoch in range (1,epochs+1):
+                for x,y in trainloader:
+                    x=x.to(self.device)
+                    y=y.to(self.device)
+
+                    self.opt.zero_grad()
+                    y_pred, pen_layer= self.network(x)
+
+                    loss_class = nn.CrossEntropyLoss(reduction='mean')(y_pred,y)
+                    loss = loss_class 
+                    if self.binenc_loss:
+                        if self.training_hypers['loss_pen_funct'] == 'exp_mse':
+                            loss_pen = torch.exp(nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean'))
+                        elif self.training_hypers['loss_pen_funct'] == 'mse':
+                            loss_pen = nn.functional.mse_loss(pen_layer, torch.zeros(pen_layer.shape).to(self.device), reduction='mean')
+                        else:
+                            print("Error: penultimate loss not available")
+                            sys.exit(1)
+                        loss = loss + loss_pen*loss_pen_factor
+                    loss.backward()
+                    self.opt.step()
+                self.scheduler.step()
+                loss_pen_factor = loss_pen_factor * self.training_hypers['loss_pen_factor_gamma']
+            
+            loss_class = loss_class.detach().cpu().numpy()
+            if verbose:
+                print(lr, loss_class, sep='\t')
+            loss_values.append(loss_class)
+        
+        if plot:
+            plt.xscale('log')  
+            plt.plot(lrs, loss_values )
+        
+        return loss_values
