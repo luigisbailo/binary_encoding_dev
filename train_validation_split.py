@@ -63,8 +63,8 @@ if __name__ == '__main__':
     parser.add_argument('--results-dir', required=True)
     parser.add_argument('--dataset-dir', required=True)
     parser.add_argument('--model', required=True)
+    parser.add_argument('--losspen-funct', required=False)
     parser.add_argument('--sample', required=False)
-    parser.add_argument('--epochs', required=False)
     parser.add_argument('--lr', required=False)
     parser.add_argument('--etf-metrics', required=False)
     args = parser.parse_args()
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     results_dir = args.results_dir
     dataset_dir = args.dataset_dir
     architecture_model = args.model
+    losspen_funct = args.losspen_funct
     sample = args.sample
-    epochs = args.epochs
     lr = args.lr
     etf_simplex_metrics = args.etf_metrics
 
@@ -86,9 +86,9 @@ if __name__ == '__main__':
         if lr.startswith('.'):
             lr = '0'+lr
         training_hypers['lr'] = float(lr)
-    if epochs:
-        training_hypers['epochs']=int(epochs)
-        training_hypers['logging']=int(epochs)
+    if losspen_funct:
+        training_hypers['loss_pen_funct']=losspen_funct
+        print(training_hypers['loss_pen_funct'])
     if not etf_simplex_metrics:
         etf_simplex_metrics=False
     elif etf_simplex_metrics == 'True' or etf_simplex_metrics == 'true':
@@ -122,10 +122,14 @@ if __name__ == '__main__':
 
     print('Training ' + str(architecture_model) + ' architecture:')
     
+    epochs = 20
+    training_hypers['epochs']=int(epochs)
+    training_hypers['logging']=int(epochs)
+    
     accuracy_train = []
     accuracy_test = []
     
-    for seed in range (5):        
+    for seed in range (3):        
 
 
         trainset, testset = torch.utils.data.random_split(dataset, [0.9, 0.1], generator=torch.Generator().manual_seed(seed))
@@ -196,7 +200,9 @@ if __name__ == '__main__':
     res['training_hypers'] = training_hypers
     res['architecture'] = architecture    
 
-        
+    
+    if architecture_model == 'bin_enc':
+        architecture_model = architecture_model + '_' + training_hypers['loss_pen_funct']
     if sample:    
         file_name = '/res_' + architecture_model + '_' + sample + '.pkl'
     else:
